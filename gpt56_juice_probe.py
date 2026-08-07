@@ -296,12 +296,16 @@ def run_juice_request(
         except Exception as exc:
             last_error = exc
             status = getattr(exc, "status", None)
-            elapsed_ms = getattr(exc, "elapsed_ms", None)
-            transport_errors.append({
-                "http_status": status,
-                "elapsed_ms": elapsed_ms,
+            request_metadata = getattr(exc, "metadata", {})
+            error_event = {
                 "error_type": type(exc).__name__,
-            })
+                "request_metadata": request_metadata,
+            }
+            if "http_status" in request_metadata:
+                error_event["http_status"] = request_metadata["http_status"]
+            if "elapsed_ms" in request_metadata:
+                error_event["elapsed_ms"] = request_metadata["elapsed_ms"]
+            transport_errors.append(error_event)
             transient = status is None or status in TRANSIENT_HTTP_STATUSES
             if transport_attempt >= max_transport_attempts or not transient:
                 break
@@ -320,11 +324,10 @@ def run_juice_request(
         "answer_kind": "error",
         "normalized_value": None,
         "matched_models": [],
-        "http_status": getattr(last_error, "status", None),
-        "elapsed_ms": getattr(last_error, "elapsed_ms", None),
         "transport_attempts": transport_attempt,
         "transport_errors": transport_errors,
         "error_type": type(last_error).__name__,
+        **getattr(last_error, "metadata", {}),
     }
 
 
@@ -385,12 +388,16 @@ def run_output_literal_control(
         except Exception as exc:
             last_error = exc
             status = getattr(exc, "status", None)
-            elapsed_ms = getattr(exc, "elapsed_ms", None)
-            transport_errors.append({
-                "http_status": status,
-                "elapsed_ms": elapsed_ms,
+            request_metadata = getattr(exc, "metadata", {})
+            error_event = {
                 "error_type": type(exc).__name__,
-            })
+                "request_metadata": request_metadata,
+            }
+            if "http_status" in request_metadata:
+                error_event["http_status"] = request_metadata["http_status"]
+            if "elapsed_ms" in request_metadata:
+                error_event["elapsed_ms"] = request_metadata["elapsed_ms"]
+            transport_errors.append(error_event)
             transient = status is None or status in TRANSIENT_HTTP_STATUSES
             if transport_attempt >= max_transport_attempts or not transient:
                 break
@@ -415,11 +422,10 @@ def run_output_literal_control(
         "observed_text": None,
         "answer_kind": "error",
         "normalized_value": None,
-        "http_status": getattr(last_error, "status", None),
-        "elapsed_ms": getattr(last_error, "elapsed_ms", None),
         "transport_attempts": transport_attempt,
         "transport_errors": transport_errors,
         "error_type": type(last_error).__name__,
+        **getattr(last_error, "metadata", {}),
     }
 
 

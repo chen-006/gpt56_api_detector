@@ -87,6 +87,63 @@ def _alerts(report: dict[str, Any]) -> list[str]:
     return alerts
 
 
+def _iter_request_metadata(value: Any) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        if any(key in value for key in ("correlation_id", "server_request_id", "token_usage")):
+            found.append(value)
+        for child in value.values():
+            found.extend(_iter_request_metadata(child))
+    elif isinstance(value, list):
+        for child in value:
+            found.extend(_iter_request_metadata(child))
+    return found
+
+
+def _metadata_section(report: dict[str, Any]) -> str:
+    configuration = report.get("configuration", {})
+    options = configuration.get("request_metadata", {})
+    observations = _iter_request_metadata(report)[-30:]
+    rows: list[str] = []
+    for item in observations:
+        usage = item.get("token_usage") or {}
+        token_text = "-"
+        if isinstance(usage, dict):
+            source = "estimated" if usage.get("source") == "estimated" else "usage"
+            token_text = f"{source}: {_text(usage.get('total_tokens'))}"
+        request_id = (
+            item.get("server_request_id")
+            or item.get("response_id")
+            or item.get("correlation_id")
+        )
+        ip_text = item.get("client_egress_ip") or "-"
+        server_ips = item.get("server_ips") or []
+        if server_ips:
+            ip_text = f"{ip_text} / {', '.join(map(str, server_ips))}"
+        rows.append(
+            "<tr>"
+            f"<td>{_e(request_id)}</td><td>{_e(item.get('started_at'))}</td>"
+            f"<td>{_e(item.get('http_status'))}</td><td>{_e(item.get('elapsed_ms'))}</td>"
+            f"<td>{_e(token_text)}</td><td>{_e(ip_text)}</td>"
+            "</tr>"
+        )
+    if not rows:
+        rows.append('<tr><td colspan="6" class="muted">未收集到请求级元数据</td></tr>')
+    estimate_note = options.get("token_estimate_warning")
+    note = f"<p class=\"muted\">{_e(estimate_note)}</p>" if estimate_note else ""
+    enabled = ", ".join(
+        key for key, value in options.items() if key.startswith("include_") and value
+    ) or "仅默认安全字段"
+    return (
+        '<section class="band"><h2>请求级详细信息</h2>'
+        f"<p class=\"muted\">已启用：{_e(enabled)}</p>{note}"
+        '<table class="metadata-table"><thead><tr>'
+        "<th>Request ID</th><th>开始时间</th><th>HTTP</th><th>耗时(ms)</th>"
+        "<th>Token</th><th>客户端出口 IP / 服务端 DNS IP</th>"
+        f"</tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
+    )
+
+
 def render_report_html(report: dict[str, Any]) -> str:
     combined = report.get("combined_summary", {})
     juice = report.get("juice_summary", {})
@@ -174,6 +231,7 @@ ul {{ margin:0; padding-left:20px; }} li {{ margin:5px 0; }} li.ok {{ color:var(
 .pill {{ display:inline-block; border:1px solid currentColor; border-radius:999px; padding:2px 8px; font-size:12px; }}
 .success-text {{ color:var(--success); }} .warning-text {{ color:var(--warning); }} .danger-text {{ color:var(--danger); }} .muted {{ color:var(--muted); }}
 .footer {{ color:var(--muted); font-size:12px; margin-top:18px; }}
+.metadata-table {{ font-size:12px; }}
 @media (max-width:720px) {{ .grid,.metrics {{ grid-template-columns:1fr; }} main {{ padding:14px; }} }}
 </style>
 </head>
@@ -220,6 +278,7 @@ ul {{ margin:0; padding-left:20px; }} li {{ margin:5px 0; }} li.ok {{ color:var(
   </div>
 </section>
 <p class="footer">加密状态层不能区分 Sol、Terra、Luna；Juice 与字面量输出对照均为可伪造的辅助证据。综合通过不能排除透明代理、探针识别或普通请求差异化路由。</p>
+{_metadata_section(report)}
 </main>
 </body>
 </html>"""

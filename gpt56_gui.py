@@ -49,6 +49,18 @@ class DetectorGUI:
         self.candidate_model = tk.StringVar(value="gpt-5.6-sol")
         self.candidate_key = tk.StringVar()
         self.same_key = tk.BooleanVar(value=False)
+        self.include_request_id = tk.BooleanVar(value=True)
+        self.include_timestamps = tk.BooleanVar(value=True)
+        self.include_duration = tk.BooleanVar(value=True)
+        self.include_http_status = tk.BooleanVar(value=True)
+        self.include_token_usage = tk.BooleanVar(value=True)
+        self.include_response_size = tk.BooleanVar(value=True)
+        self.include_server_ip = tk.BooleanVar(value=False)
+        self.include_client_ip = tk.BooleanVar(value=False)
+        self.estimate_tokens = tk.BooleanVar(value=False)
+        self.client_ip_lookup_url = tk.StringVar(
+            value="https://api64.ipify.org?format=json"
+        )
         self.min_interval = tk.StringVar(value="150")
         self.max_interval = tk.StringVar(value="210")
         self.single_workers = tk.StringVar(value="8")
@@ -224,6 +236,42 @@ class DetectorGUI:
         )
         self.workers_spinbox.pack(anchor="w", pady=(4, 0))
 
+        metadata = ttk.LabelFrame(parent, text="报告包含信息", padding=10)
+        metadata.pack(fill="x", pady=(0, 10))
+        ttk.Label(
+            metadata,
+            text="默认字段可用于精确定位每次请求；IP 默认关闭。",
+            style="Detail.TLabel",
+            wraplength=315,
+        ).pack(anchor="w", pady=(0, 5))
+        default_fields = (
+            ("Request ID（客户端关联 ID + 服务端 ID）", self.include_request_id),
+            ("时间", self.include_timestamps),
+            ("耗时", self.include_duration),
+            ("HTTP 状态", self.include_http_status),
+            ("服务端 usage token", self.include_token_usage),
+            ("响应大小", self.include_response_size),
+        )
+        for label, variable in default_fields:
+            ttk.Checkbutton(metadata, text=label, variable=variable).pack(anchor="w")
+        ttk.Separator(metadata).pack(fill="x", pady=5)
+        ttk.Checkbutton(
+            metadata,
+            text="服务端 IP（目标 DNS 结果；代理时不是代理 peer IP）",
+            variable=self.include_server_ip,
+        ).pack(anchor="w")
+        ttk.Checkbutton(
+            metadata,
+            text="发起端真实出口 IP（通过代理感知的 IP 查询）",
+            variable=self.include_client_ip,
+        ).pack(anchor="w")
+        self._entry(metadata, "出口 IP 查询地址", self.client_ip_lookup_url)
+        ttk.Checkbutton(
+            metadata,
+            text="高级：无 usage 时估算 token（不一定准确）",
+            variable=self.estimate_tokens,
+        ).pack(anchor="w")
+
         output = ttk.LabelFrame(parent, text="报告", padding=10)
         output.pack(fill="x", pady=(0, 12))
         output_row = ttk.Frame(output)
@@ -362,6 +410,21 @@ class DetectorGUI:
         script = APP_DIR / ("gpt56_reasoning_monitor.py" if continuous else "gpt56_reasoning_probe.py")
         gap_min, gap_max = ("2", "5") if continuous else ("0", "0")
         command = [sys.executable, str(script), "--candidate-base-url", candidate_url, "--candidate-model", self.candidate_model.get().strip() or "gpt-5.6-sol", "--candidate-retries", "2", "--candidate-min-gap", gap_min, "--candidate-max-gap", gap_max, "--output", str(output)]
+        metadata_flags = (
+            ("--omit-request-id", not self.include_request_id.get()),
+            ("--omit-timestamps", not self.include_timestamps.get()),
+            ("--omit-duration", not self.include_duration.get()),
+            ("--omit-http-status", not self.include_http_status.get()),
+            ("--omit-token-usage", not self.include_token_usage.get()),
+            ("--omit-response-size", not self.include_response_size.get()),
+            ("--include-server-ip", self.include_server_ip.get()),
+            ("--include-client-ip", self.include_client_ip.get()),
+            ("--estimate-tokens", self.estimate_tokens.get()),
+        )
+        for flag, enabled in metadata_flags:
+            if enabled:
+                command.append(flag)
+        command.extend(["--client-ip-lookup-url", self.client_ip_lookup_url.get().strip()])
         if continuous:
             minimum = int(self.min_interval.get())
             maximum = int(self.max_interval.get())

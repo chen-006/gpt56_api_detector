@@ -314,6 +314,28 @@ juice 不能单独让综合检测通过。即使 juice 看起来像 Sol，也必
 
 ## key 和报告安全
 
+### 请求级详细信息与隐私配置
+
+图形界面的“报告包含信息”区域可以逐项控制请求元数据。默认记录 Request ID、UTC 开始/完成时间、耗时、HTTP 状态、服务端 `usage` token 和响应字节数；服务端 IP、发起端出口 IP 默认关闭。
+
+Request ID 同时保留三层定位信息：
+
+- `correlation_id`：检测器为每一次网络尝试生成，并通过 `X-Client-Request-ID` 请求头发送；即使超时或服务端没有返回 ID，也能把控制台日志、重试和 JSON 条目对应起来；
+- `server_request_id`：从 `x-request-id`、`request-id`、`openai-request-id`、`x-correlation-id`、`traceparent`、`cf-ray` 等响应头中提取，并记录来源头；
+- `response_id`：Responses API JSON 返回的 `id`。它经常是向 API 提供方进一步定位具体请求时最直接的标识。
+
+发生重试时，每一次失败的网络尝试也会在 `transport_errors[].request_metadata` 中保留自己的关联 ID、时间和可用响应信息，不会只留下最终成功请求。
+
+token 统计优先使用服务端 `usage`，兼容 `input_tokens`/`output_tokens` 和 `prompt_tokens`/`completion_tokens` 命名。只有主动勾选“高级：无 usage 时估算 token”或使用 `--estimate-tokens` 时，才会按可见 Unicode 字符数进行粗略估算；报告会以 `source=estimated`、估算方法和警告明确标记，不能将它视为计费 token。
+
+IP 字段的含义和限制：
+
+- `server_ips` 是目标 API 主机名的 DNS 解析结果。启用 HTTP 代理时，它不是代理连接的 peer IP；报告会保留这一限制说明；
+- `client_egress_ip` 通过配置的 IP echo 地址查询。该查询使用 Python/系统代理设置，因此配置代理时得到的是代理实际出口 IP，而不是本机网卡地址。开启它会向查询服务额外发送一次请求；检测器会缓存结果，避免每个检测请求都重复查询；
+- 可用 `--client-ip-lookup-url` 换成自建或组织内部的 IP echo 服务。默认地址只会在显式启用发起端 IP 时访问。
+
+命令行对应选项包括 `--include-server-ip`、`--include-client-ip`、`--client-ip-lookup-url`、`--estimate-tokens`，以及 `--omit-request-id`、`--omit-timestamps`、`--omit-duration`、`--omit-http-status`、`--omit-token-usage`、`--omit-response-size`。
+
 报告不会保存：
 
 - API key；
