@@ -15,6 +15,12 @@ import time
 from typing import Any
 
 from gpt56_report_html import write_report_html
+from gpt56_request_metadata import (
+    add_metadata_arguments,
+    format_attempt_logs,
+    format_metadata_log,
+    metadata_options_from_args,
+)
 
 from gpt56_juice_probe import (
     AUXILIARY_EFFORTS,
@@ -130,11 +136,15 @@ def call_and_score(
             }
         except ProbeError as exc:
             last_error = exc
-            transport_errors.append({
-                "http_status": exc.status,
-                "elapsed_ms": exc.elapsed_ms,
+            error_event = {
                 "error": redact(str(exc)),
-            })
+                "request_metadata": exc.metadata,
+            }
+            if "http_status" in exc.metadata:
+                error_event["http_status"] = exc.metadata["http_status"]
+            if "elapsed_ms" in exc.metadata:
+                error_event["elapsed_ms"] = exc.metadata["elapsed_ms"]
+            transport_errors.append(error_event)
             transient = exc.status is None or exc.status in TRANSIENT_HTTP_STATUSES
             if transport_attempt >= max_transport_attempts or not transient:
                 break
@@ -146,11 +156,10 @@ def call_and_score(
         "status": "error",
         "exact": False,
         "plaintext_leak": False,
-        "http_status": last_error.status,
-        "elapsed_ms": last_error.elapsed_ms,
         "transport_attempts": transport_attempt,
         "transport_errors": transport_errors,
         "error": redact(str(last_error)),
+        **last_error.metadata,
     }
 
 def seed_payload(model: str, prompt: str) -> dict[str, Any]:
@@ -185,6 +194,7 @@ def run_one_challenge(
             "task": task,
             "http_status": exc.status,
             "error": redact(str(exc)),
+            "request_metadata": exc.metadata,
         }
 
     output = seed.get("output")
@@ -576,7 +586,9 @@ def parse_args() -> argparse.Namespace:
         help="skip trusted encrypted-state challenges and continuously probe Juice only",
     )
     parser.add_argument("--output", type=Path, default=Path("gpt56-monitor-report.json"))
+    add_metadata_arguments(parser)
     args = parser.parse_args()
+    args.metadata_options = metadata_options_from_args(args)
     if args.min_interval < 1 or args.max_interval < args.min_interval:
         parser.error("intervals must satisfy 1 <= min <= max")
     if not args.juice_only and not args.trusted_base_url:
@@ -702,6 +714,15 @@ def print_monitor_status(
         f"{output_control['expected_counts']['32']}）"
     )
     print(f"线路情况：{network['title_cn']}（{network['detail_cn']}）")
+    if juice_observation is not None:
+        suffix = format_metadata_log(juice_observation)
+        if suffix:
+            print(f"Juice request{suffix}")
+    controls = report.get("output_literal_control_observations", [])
+    if controls:
+        suffix = format_metadata_log(controls[-1])
+        if suffix:
+            print(f"Output control request{suffix}")
 
     current = None if juice_only else trial or candidate_attempt
     if current is not None:
@@ -717,6 +738,14 @@ def print_monitor_status(
             f"去掉编号{'答对' if candidate['without_ids'].get('exact') else '未答对'}，"
             f"异常 {abnormal_now}，失败 {failed}，重试 {retry_events}"
         )
+        for variant, result in candidate.items():
+            for line in format_attempt_logs(variant, result):
+                print(f"  {line}")
+        trusted_seed = current.get("trusted_seed", {})
+        if trusted_seed:
+            print(f"  trusted seed{format_metadata_log(trusted_seed)}")
+        for line in format_attempt_logs("trusted self", current.get("trusted_self", {})):
+            print(f"  {line}")
     elif failure is not None and not juice_only:
         reason = failure.get("reason", "unknown")
         print(f"本轮未测试待测端：{FAILURE_LABELS.get(reason, reason)}")
@@ -741,11 +770,15 @@ def main() -> int:
         raise SystemExit("缺少待测 API 的临时密钥环境变量")
     if not args.juice_only and not trusted_key:
         raise SystemExit("缺少可信 API 的临时密钥环境变量")
-    candidate = ResponsesClient(args.candidate_base_url, candidate_key, args.timeout)
+    candidate = ResponsesClient(
+        args.candidate_base_url, candidate_key, args.timeout, args.metadata_options
+    )
     trusted = (
         None
         if args.juice_only
-        else ResponsesClient(args.trusted_base_url, trusted_key, args.timeout)
+        else ResponsesClient(
+            args.trusted_base_url, trusted_key, args.timeout, args.metadata_options
+        )
     )
     trials: list[dict[str, Any]] = []
     candidate_attempts: list[dict[str, Any]] = []
@@ -910,7 +943,7 @@ def main() -> int:
                 output_literal_summary["status"]
             )
             report = {
-                "schema_version": 5,
+                "schema_version": 6,
                 "mode": (
                     "continuous_juice_only_v3_1_1_monitor"
                     if args.juice_only
@@ -920,6 +953,7 @@ def main() -> int:
                 "updated_at": report_time.isoformat(),
                 "trusted_source_health_reported_separately": True,
                 "configuration": {
+                    "request_metadata": args.metadata_options.report_config(),
                     "detection_mode": (
                         "juice_only" if args.juice_only else "combined"
                     ),

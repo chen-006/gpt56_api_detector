@@ -21,6 +21,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from gpt56_juice_probe import (
     EFFORTS,
@@ -41,12 +42,24 @@ from gpt56_juice_probe import (
     summarize_output_literal_controls,
     summarize_juice,
 )
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 from gpt56_report_html import write_report_html
+from gpt56_request_metadata import (
+    MetadataOptions,
+    add_metadata_arguments,
+    build_request_metadata,
+    lookup_client_egress_ip,
+    format_metadata_log,
+    format_attempt_logs,
+    metadata_options_from_args,
+    resolve_server_ips,
+    utc_now,
+)
 
 
 TASKS = (
@@ -141,10 +154,17 @@ def transform(task: str, value: str) -> str:
 
 
 class ProbeError(RuntimeError):
-    def __init__(self, message: str, status: int | None = None, elapsed_ms: int | None = None):
+    def __init__(
+        self,
+        message: str,
+        status: int | None = None,
+        elapsed_ms: int | None = None,
+        metadata: dict[str, Any] | None = None,
+    ):
         super().__init__(message)
         self.status = status
         self.elapsed_ms = elapsed_ms
+        self.metadata = metadata or {}
 
 
 @dataclass
@@ -152,49 +172,151 @@ class ResponsesClient:
     base_url: str
     api_key: str
     timeout: float
+    metadata_options: MetadataOptions = field(default_factory=MetadataOptions)
+    _server_ips: list[str] = field(default_factory=list, init=False, repr=False)
+    _server_ips_loaded: bool = field(default=False, init=False, repr=False)
+    _client_ip: str | None = field(default=None, init=False, repr=False)
+    _client_ip_error: str | None = field(default=None, init=False, repr=False)
+    _client_ip_loaded: bool = field(default=False, init=False, repr=False)
+    _metadata_cache_lock: Lock = field(default_factory=Lock, init=False, repr=False)
 
     @property
     def url(self) -> str:
         return self.base_url.rstrip("/") + "/responses"
 
+    def _network_addresses(self) -> tuple[list[str], str | None, str | None]:
+        with self._metadata_cache_lock:
+            if self.metadata_options.include_server_ip and not self._server_ips_loaded:
+                self._server_ips = resolve_server_ips(self.url)
+                self._server_ips_loaded = True
+            if self.metadata_options.include_client_ip and not self._client_ip_loaded:
+                self._client_ip_loaded = True
+                try:
+                    self._client_ip = lookup_client_egress_ip(
+                        self.metadata_options.client_ip_lookup_url,
+                        timeout=min(max(self.timeout, 1.0), 10.0),
+                    )
+                except (OSError, ValueError) as exc:
+                    self._client_ip_error = type(exc).__name__
+        return self._server_ips, self._client_ip, self._client_ip_error
+
+    def _metadata(
+        self,
+        *,
+        correlation_id: str,
+        payload: dict[str, Any],
+        decoded: dict[str, Any],
+        response_headers: dict[str, str],
+        status: int | None,
+        started_at: datetime,
+        elapsed_ms: int,
+        response_size_bytes: int,
+    ) -> dict[str, Any]:
+        completed_at = utc_now()
+        server_ips, client_ip, client_ip_error = self._network_addresses()
+        return build_request_metadata(
+            options=self.metadata_options,
+            correlation_id=correlation_id,
+            url=self.url,
+            payload=payload,
+            response=decoded,
+            response_headers=response_headers,
+            status=status,
+            started_at=started_at,
+            completed_at=completed_at,
+            elapsed_ms=elapsed_ms,
+            response_size_bytes=response_size_bytes,
+            server_ips=server_ips,
+            client_ip=client_ip,
+            client_ip_error=client_ip_error,
+        )
+
     def post(self, payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        correlation_id = uuid.uuid4().hex
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": os.environ.get("GPT56_USER_AGENT", "python-urllib/3"),
+        }
+        if self.metadata_options.include_request_id:
+            headers["X-Client-Request-ID"] = correlation_id
         request = urllib.request.Request(
             self.url,
             data=body,
             method="POST",
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-
-                "User-Agent": os.environ.get("GPT56_USER_AGENT", "python-urllib/3"),
-            },
+            headers=headers,
         )
+        started_at = utc_now()
         started = time.perf_counter()
         status: int | None = None
         raw = b""
+        response_headers: dict[str, str] = {}
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 status = response.status
+                response_headers = dict(response.headers.items())
                 raw = response.read()
         except urllib.error.HTTPError as exc:
             status = exc.code
+            response_headers = dict(exc.headers.items()) if exc.headers else {}
             raw = exc.read()
         except Exception as exc:
             elapsed = round((time.perf_counter() - started) * 1000)
-            raise ProbeError(redact(str(exc)), status=None, elapsed_ms=elapsed) from exc
+            metadata = self._metadata(
+                correlation_id=correlation_id,
+                payload=payload,
+                decoded={},
+                response_headers=response_headers,
+                status=None,
+                started_at=started_at,
+                elapsed_ms=elapsed,
+                response_size_bytes=0,
+            )
+            raise ProbeError(
+                redact(str(exc)), status=None, elapsed_ms=elapsed, metadata=metadata
+            ) from exc
         elapsed = round((time.perf_counter() - started) * 1000)
         try:
             decoded = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise ProbeError("non-JSON response", status=status, elapsed_ms=elapsed) from exc
+            metadata = self._metadata(
+                correlation_id=correlation_id,
+                payload=payload,
+                decoded={},
+                response_headers=response_headers,
+                status=status,
+                started_at=started_at,
+                elapsed_ms=elapsed,
+                response_size_bytes=len(raw),
+            )
+            raise ProbeError(
+                "non-JSON response", status=status, elapsed_ms=elapsed, metadata=metadata
+            ) from exc
+        metadata = self._metadata(
+            correlation_id=correlation_id,
+            payload=payload,
+            decoded=decoded if isinstance(decoded, dict) else {},
+            response_headers=response_headers,
+            status=status,
+            started_at=started_at,
+            elapsed_ms=elapsed,
+            response_size_bytes=len(raw),
+        )
         if status is None or not 200 <= status < 300:
             error = decoded.get("error", decoded) if isinstance(decoded, dict) else decoded
-            raise ProbeError(str(redact(error)), status=status, elapsed_ms=elapsed)
+            raise ProbeError(
+                str(redact(error)), status=status, elapsed_ms=elapsed, metadata=metadata
+            )
         if not isinstance(decoded, dict):
-            raise ProbeError("response JSON is not an object", status=status, elapsed_ms=elapsed)
-        return decoded, {"http_status": status, "elapsed_ms": elapsed}
+            raise ProbeError(
+                "response JSON is not an object",
+                status=status,
+                elapsed_ms=elapsed,
+                metadata=metadata,
+            )
+        return decoded, metadata
 
 
 def seed_payload(model: str, prompt: str) -> dict[str, Any]:
@@ -303,11 +425,15 @@ def call_and_score(
             }
         except ProbeError as exc:
             last_error = exc
-            transport_errors.append({
-                "http_status": exc.status,
-                "elapsed_ms": exc.elapsed_ms,
+            error_event = {
                 "error": redact(str(exc)),
-            })
+                "request_metadata": exc.metadata,
+            }
+            if "http_status" in exc.metadata:
+                error_event["http_status"] = exc.metadata["http_status"]
+            if "elapsed_ms" in exc.metadata:
+                error_event["elapsed_ms"] = exc.metadata["elapsed_ms"]
+            transport_errors.append(error_event)
             transient = exc.status is None or exc.status in TRANSIENT_HTTP_STATUSES
             if transport_attempt >= max_transport_attempts or not transient:
                 break
@@ -319,11 +445,10 @@ def call_and_score(
         "status": "error",
         "exact": False,
         "plaintext_leak": False,
-        "http_status": last_error.status,
-        "elapsed_ms": last_error.elapsed_ms,
         "transport_attempts": transport_attempt,
         "transport_errors": transport_errors,
         "error": redact(str(last_error)),
+        **last_error.metadata,
     }
 
 def blind_guess_tail_probability(successes: int, trials: int) -> float:
@@ -415,6 +540,14 @@ def print_candidate_attempt_result(trial: dict[str, Any]) -> None:
         f"去掉编号后{'答对' if candidate['without_ids'].get('exact') else '未答对'}，"
         f"异常测试{'正常' if negative == 0 else '命中'}，线路{network}"
     )
+    for variant, result in candidate.items():
+        for line in format_attempt_logs(variant, result):
+            print(f"  {line}")
+    trusted_seed = trial.get("trusted_seed", {}).get("request_metadata", {})
+    if trusted_seed:
+        print(f"  trusted seed{format_metadata_log(trusted_seed)}")
+    for line in format_attempt_logs("trusted self", trial.get("trusted_self", {})):
+        print(f"  {line}")
 
 
 def print_probe_summary(report: dict[str, Any], report_path: Path) -> None:
@@ -557,6 +690,8 @@ def run_juice_batch(
         else:
             detail = "其他非数字回复（记为无证据）"
         print(f"  {index}/{len(jobs)} 结果：{detail}", flush=True)
+        for line in format_attempt_logs("request", observation):
+            print(f"    {line}", flush=True)
         return index, observation
 
     workers = min(args.workers, len(jobs))
@@ -600,6 +735,8 @@ def run_output_literal_control_once(
             f"返回 {observation.get('observed_text')!r}"
         )
     print(f"  结果：{detail}", flush=True)
+    for line in format_attempt_logs("request", observation):
+        print(f"  {line}", flush=True)
     return observation
 
 
@@ -625,6 +762,8 @@ def run_single_output_literal_controls(
         else:
             detail = f"返回 {observation.get('observed_text')!r}"
         print(f"  结果：{detail}", flush=True)
+        for line in format_attempt_logs("request", observation):
+            print(f"  {line}", flush=True)
     return observations
 
 
@@ -661,7 +800,7 @@ def run_juice_only_probe(
         "blind_guess_upper_tail_without_ids": None,
     }
     return {
-        "schema_version": 5,
+        "schema_version": 6,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "mode": "juice_only_single_v3_1_1",
         "verdict": "not_run_juice_only",
@@ -673,6 +812,7 @@ def run_juice_only_probe(
             "reasoning-state compatibility or prove backend identity."
         ),
         "configuration": {
+            "request_metadata": args.metadata_options.report_config(),
             "detection_mode": "juice_only",
             "candidate_base_url": args.candidate_base_url,
             "candidate_model": args.candidate_model,
@@ -743,6 +883,7 @@ def run_encrypted_attempt(
             "reason": "trusted_seed_error",
             "http_status": exc.status,
             "error": redact(str(exc)),
+            "request_metadata": exc.metadata,
         }
         print(f"COT 任务 {attempt} 舍弃：可信 API 生成状态失败。", flush=True)
         return attempt, None, rejection
@@ -803,8 +944,7 @@ def run_encrypted_attempt(
         "task": task,
         "expected_sha256": sha256(expected),
         "trusted_seed": {
-            "http_status": seed_meta["http_status"],
-            "elapsed_ms": seed_meta["elapsed_ms"],
+            "request_metadata": seed_meta,
             "output_item_types": [
                 item.get("type") for item in output if isinstance(item, dict)
             ],
@@ -826,10 +966,14 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
     if not candidate_key:
         raise SystemExit(f"缺少待测 API 临时密钥环境变量：{args.candidate_key_env}")
 
-    candidate = ResponsesClient(args.candidate_base_url, candidate_key, args.timeout)
+    candidate = ResponsesClient(
+        args.candidate_base_url, candidate_key, args.timeout, args.metadata_options
+    )
     if args.juice_only:
         return run_juice_only_probe(args, candidate)
-    trusted = ResponsesClient(args.trusted_base_url, trusted_key, args.timeout)
+    trusted = ResponsesClient(
+        args.trusted_base_url, trusted_key, args.timeout, args.metadata_options
+    )
     valid_trials: list[dict[str, Any]] = []
     rejected_attempts: list[dict[str, Any]] = []
     max_attempts = args.max_attempts or args.trials * 3
@@ -945,7 +1089,7 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     return {
-        "schema_version": 5,
+        "schema_version": 6,
         "mode": "combined_single_v3_1_1",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "verdict": verdict,
@@ -957,6 +1101,7 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
             "This is not proof of physical backend identity and cannot distinguish Sol, Terra, or Luna."
         ),
         "configuration": {
+            "request_metadata": args.metadata_options.report_config(),
             "detection_mode": "combined" if not no_juice else "encrypted_only",
             "trusted_base_url": args.trusted_base_url,
             "trusted_model": args.trusted_model,
@@ -1156,8 +1301,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--timeout", type=float, default=180.0)
     parser.add_argument("--output", type=Path, default=Path("gpt56_probe_report.json"))
+    add_metadata_arguments(parser)
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
+    args.metadata_options = metadata_options_from_args(args)
     if args.self_test:
         return args
     if not args.candidate_base_url:
