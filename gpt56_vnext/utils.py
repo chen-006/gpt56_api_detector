@@ -10,6 +10,7 @@ import random
 import threading
 import time
 from typing import Any, Iterable, Sequence
+from urllib.parse import urlsplit, urlunsplit
 
 
 def utc_now() -> str:
@@ -26,6 +27,17 @@ def sha256_text(value: str) -> str:
 
 def deterministic_job_id(value: Any) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()[:32]
+
+
+def normalize_api_base_url(value: str) -> str:
+    text = str(value).strip()
+    parsed = urlsplit(text)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("API 地址必须是完整的 http:// 或 https:// 地址")
+    path = parsed.path.rstrip("/")
+    if not path:
+        path = "/v1"
+    return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, parsed.fragment))
 
 
 def atomic_write_json(path: str | Path, value: Any) -> None:

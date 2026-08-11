@@ -384,11 +384,15 @@ class SQLiteStateStore:
         def write(connection: sqlite3.Connection) -> int | None:
             def transaction() -> int | None:
                 attempt = connection.execute(
-                    "SELECT session_id,job_id FROM attempts WHERE attempt_id=?",
+                    "SELECT a.session_id,a.job_id,a.status,j.status AS job_status "
+                    "FROM attempts a JOIN jobs j ON j.session_id=a.session_id AND j.job_id=a.job_id "
+                    "WHERE a.attempt_id=?",
                     (attempt_id,),
                 ).fetchone()
                 if attempt is None:
                     raise KeyError(f"attempt not found: {attempt_id}")
+                if attempt["status"] != "running" or attempt["job_status"] != "pending":
+                    return None
                 connection.execute(
                     "UPDATE attempts SET completed_at=?,status=?,stage=?,category=?,retryable=?,http_status=?,safe_message=? WHERE attempt_id=?",
                     (now, status, stage, category, int(retryable), http_status, safe_message, attempt_id),
@@ -435,6 +439,30 @@ class SQLiteStateStore:
 
     def record_cancelled(self, session_id: str, job_id: str, result: dict[str, Any]) -> int:
         return self.record_terminal_result(session_id, job_id, "cancelled", result)
+
+    def cancel_running_attempts(self, session_id: str, job_ids: set[str], *, category: str) -> int:
+        if not job_ids:
+            return 0
+        now = utc_now()
+
+        def write(connection: sqlite3.Connection) -> int:
+            placeholders = ",".join("?" for _ in job_ids)
+            cursor = connection.execute(
+                f"UPDATE attempts SET completed_at=?,status='cancelled',stage='transport',category=?,"
+                "retryable=0,safe_message=? WHERE session_id=? AND status='running' "
+                f"AND job_id IN ({placeholders})",
+                (
+                    now,
+                    category,
+                    "用户已停止检测，仍在途的请求已取消",
+                    session_id,
+                    *sorted(job_ids),
+                ),
+            )
+            connection.commit()
+            return int(cursor.rowcount)
+
+        return self._write(write)
 
     def reconcile_incomplete_attempts(self, session_id: str, max_attempts: int) -> dict[str, int]:
         now = utc_now()

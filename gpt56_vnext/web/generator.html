@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body>
-  <header class="topbar"><div><strong>概率探针生成器</strong><span>可信三模型基线</span></div><a href="/">返回检测器</a></header>
+  <header class="topbar"><div><strong>指纹探针生成器</strong><span>v4.1.0 · 可信三模型参考基线</span></div><a href="/">返回检测器</a></header>
   <nav class="steps generator-steps" aria-label="生成器步骤">
     <button class="step active" data-gstep="trusted"><span>1</span>可信连接</button>
     <button class="step" data-gstep="definition"><span>2</span>探针定义</button>
@@ -39,7 +39,7 @@
       </div>
       <details class="advanced"><summary>高级设置</summary><div class="form-grid compact">
         <label class="wide">system/developer 提示<textarea id="g-developer" rows="3"></textarea></label>
-        <label>答案归一化<select id="g-normalizer"><option value="exact_trimmed_casefold">默认：去首尾空白并转小写</option><option value="exact_trimmed">保留大小写</option><option value="integer">整数</option><option value="whitespace_collapse">合并空白</option></select></label>
+        <label>答案归一化<select id="g-normalizer"><option value="exact_trimmed_casefold">默认：去首尾空白并转小写</option><option value="exact_trimmed">保留大小写</option><option value="integer">整数</option><option value="whitespace_collapse">合并空白</option></select><small>建议让答案尽量短且格式固定。只有题目确实返回整数时才选“整数”。</small></label>
         <label>思考强度<select id="g-effort"><option>low</option><option>medium</option><option>high</option><option>xhigh</option><option>max</option></select></label>
       </div></details>
       <div class="actions"><button class="secondary" data-prev="trusted">返回</button><button class="primary" data-next="sampling">继续</button></div>
@@ -56,7 +56,7 @@
       </div>
       <details class="advanced"><summary>请求格式高级设置</summary><div class="option-grid">
         <label class="check-row"><input id="g-format-normal" type="checkbox" checked>普通 Responses<span>默认</span></label>
-        <label class="check-row"><input id="g-format-native" type="checkbox">原生 Codex<span>增加请求格</span></label>
+        <label class="check-row"><input id="g-format-native" type="checkbox">原生 Codex<span>增加请求格；建议配合系统级 TUN VPN</span></label>
         <label class="check-row"><input id="g-context-none" type="checkbox" checked>无历史<span>默认</span></label>
         <label class="check-row"><input id="g-context-32k" type="checkbox">固定 32K<span>高 Token 消耗</span></label>
       </div></details>
@@ -68,17 +68,17 @@
       <div class="section-heading"><div><h1>运行进度</h1><p id="g-progress-text">等待采集开始。</p></div></div>
       <div class="progress-track"><div id="g-progress-bar" style="width:0%"></div></div>
       <div id="g-progress-metrics" class="metrics"></div>
-      <div class="actions"><button id="g-resume-setup" class="secondary hidden">重新填写 API key 后继续</button><button id="g-analyze" class="primary" disabled>分析结果</button></div>
+      <div class="actions"><button id="g-stop" class="secondary" disabled>停止采集</button><button id="g-resume-setup" class="secondary hidden">重新填写 API key 后继续</button><button id="g-analyze" class="primary" disabled>分析结果</button></div>
     </section>
 
     <section id="gstep-analysis" class="page-step">
-      <div class="section-heading"><div><h1>统计分析</h1><p>显示 JSD、各模型采样量和有效率；本版本导入的自定义探针统一作为参考证据。</p></div></div>
+      <div class="section-heading"><div><h1>统计分析</h1><p>比较三模型答案分布、区分度和时间稳定性。自定义探针统一作为参考证据，不产生正式结论。</p></div></div>
       <div id="g-analysis-result" class="report-list"></div>
       <div class="actions"><button class="primary" data-next="export">查看导出</button></div>
     </section>
 
     <section id="gstep-export" class="page-step">
-      <div class="section-heading"><div><h1>导出探针</h1><p>导出只包含归一化计数、资格信息和内容哈希，不包含 API key 或端点。</p></div></div>
+      <div class="section-heading"><div><h1>导出探针</h1><p>导出只包含归一化计数、参考统计和内容哈希，不包含 API key 或端点。</p></div></div>
       <div class="export-box"><strong id="g-output">尚未导出</strong><p id="g-export-flags"></p><div class="actions"><a class="download-link" href="/api/generator/export" download>下载 .gpt56probe.json</a><button id="g-use-detector" class="primary">直接加入检测器</button></div></div>
       <details class="technical"><summary>导出 JSON 摘要</summary><pre id="g-export-json"></pre></details>
     </section>

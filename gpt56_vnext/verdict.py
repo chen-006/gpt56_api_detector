@@ -5,12 +5,14 @@ from typing import Any
 from .juice import TARGET_MODELS
 
 
-VERDICT_TITLES = (
-    "可能非GPT",
-    "Juice混用",
-    "仅概率探针混用",
-    "Juice通过但概率探针证据不足",
-    "通过",
+OUTCOME_CODES = (
+    "juice_pass_fingerprint_strong",
+    "juice_pass_fingerprint_unclear",
+    "juice_mismatch_fingerprint_strong",
+    "juice_mismatch_fingerprint_unclear",
+    "juice_insufficient_fingerprint_strong",
+    "juice_insufficient_fingerprint_unclear",
+    "possible_non_gpt",
 )
 
 MODEL_LABELS = {
@@ -22,120 +24,211 @@ MODEL_LABELS = {
     "gpt-5.4-mini": "GPT-5.4 mini",
 }
 
+FINGERPRINT_REASON_CN = {
+    "no_exact_runtime_contract": "当前题面、请求次数或请求格式没有对应的正式内置指纹基线。",
+    "runtime_reference_only": "当前配置只允许显示参考匹配度，不产生正式强指向结论。",
+    "runtime_contract_mismatch": "探针题面、思考强度、归一化方式或请求格式与冻结契约不一致。",
+    "baseline_cells_missing": "可信基线缺少当前配置所需的探针格。",
+    "candidate_samples_incomplete": "至少一个探针格未完成计划请求数的90%。",
+    "no_weighted_fingerprint_family": "当前没有取得可用于比较的有效指纹家族。",
+    "no_model_reached_strong_match_threshold": "三个模型都没有越过当前档位的强指向线。",
+    "multiple_models_reached_threshold": "多个模型同时越过强指向线，结果存在数值异常。",
+    "custom_probe_reference_only": "导入的自定义探针未经发行版正式验证，匹配度仅供参考。",
+    "builtin_fingerprint_not_enabled": "当前档位没有启用内置指纹探针。",
+}
 
-def _probability_rows(probability: dict[str, Any]) -> list[dict[str, Any]]:
-    values = probability.get("conditional_relative_probability") or {}
-    if not values:
-        return []
+
+def _fingerprint_rows(fingerprint: dict[str, Any]) -> list[dict[str, Any]]:
+    values = fingerprint.get("fingerprint_match") or {}
+    thresholds = fingerprint.get("fingerprint_thresholds") or {}
     return sorted(
         [
             {
                 "model": model,
                 "label_cn": MODEL_LABELS.get(model, model),
-                "probability": float(values.get(model, 0.0)),
-                "score": probability.get("pure_scores", {}).get(model),
+                "match": float(values.get(model, 0.0)),
+                "threshold": thresholds.get(model),
+                "score": (fingerprint.get("scores") or {}).get(model),
             }
             for model in TARGET_MODELS
         ],
-        key=lambda row: row["probability"],
+        key=lambda row: row["match"],
         reverse=True,
     )
+
+
+def _juice_state(
+    juice: dict[str, Any],
+    output: dict[str, Any],
+    coverage: dict[str, Any],
+) -> str:
+    deterministic_anomaly = bool(
+        juice.get("juice_mixed")
+        or output.get("hard_anomaly")
+        or output.get("sticky_hard_anomaly")
+        or coverage.get("hard_anomaly")
+        or coverage.get("sticky_hard_anomaly")
+    )
+    if deterministic_anomaly:
+        return "mismatch"
+    if juice.get("juice_all_unsuccessful"):
+        return "possible_non_gpt"
+    if juice.get("juice_pass"):
+        return "pass"
+    return "insufficient"
+
+
+def _title(juice_state: str, fingerprint: dict[str, Any]) -> tuple[str, str]:
+    if juice_state == "possible_non_gpt":
+        return "possible_non_gpt", "可能非GPT"
+    strong = fingerprint.get("fingerprint_status") == "strong_match" and bool(fingerprint.get("fingerprint_model"))
+    fingerprint_part = (
+        f"指纹强烈指向 {MODEL_LABELS.get(str(fingerprint['fingerprint_model']), fingerprint['fingerprint_model'])}"
+        if strong else "指纹证据不明确"
+    )
+    juice_label = {
+        "pass": "Juice通过",
+        "mismatch": "Juice与申报型号不一致",
+        "insufficient": "Juice证据不足",
+    }[juice_state]
+    code = f"juice_{'mismatch' if juice_state == 'mismatch' else juice_state}_fingerprint_{'strong' if strong else 'unclear'}"
+    return code, f"{juice_label}；{fingerprint_part}"
+
+
+def _subtitle(juice_state: str, fingerprint: dict[str, Any], custom: bool) -> str:
+    fingerprint_model = MODEL_LABELS.get(str(fingerprint.get("fingerprint_model")), str(fingerprint.get("fingerprint_model")))
+    fingerprint_reasons = set(fingerprint.get("fingerprint_unclear_reasons") or [])
+    if juice_state == "possible_non_gpt":
+        text = "所有达到数量要求的有效 Juice 响应均未命中已知型号指纹；也可能由统一输出改写、参数未透传或探针拦截造成。"
+    elif juice_state == "pass" and fingerprint.get("fingerprint_status") == "strong_match":
+        text = f"Juice 未发现型号冲突；本批行为分布与 {fingerprint_model} 的可信指纹最接近。"
+    elif juice_state == "pass" and "builtin_fingerprint_not_enabled" in fingerprint_reasons:
+        text = "Juice 未发现型号冲突。当前为低档，仅检测 Juice 与确定性异常，未启用行为指纹探针。"
+    elif juice_state == "pass":
+        text = "Juice 未发现型号冲突，但行为指纹没有形成正式强指向；请结合样本完整性和线路质量阅读。"
+    elif juice_state == "mismatch" and fingerprint.get("fingerprint_status") == "strong_match":
+        text = f"至少一项确定性检查与申报不一致；行为分布同时强烈指向 {fingerprint_model}。"
+    elif juice_state == "mismatch":
+        text = "至少一项确定性检查与申报不一致；行为指纹暂时没有形成明确方向。"
+    elif fingerprint.get("fingerprint_status") == "strong_match":
+        text = f"Juice 缺少至少一个思考档的申报型号命中；行为分布强烈指向 {fingerprint_model}，只能作为补充证据。"
+    elif "builtin_fingerprint_not_enabled" in fingerprint_reasons:
+        text = "当前为低档，仅检测 Juice 与确定性异常，未启用行为指纹探针；Juice 证据也不足，请查看未完成项目。"
+    else:
+        text = "Juice 和行为指纹都没有取得足够证据，请先检查未完成项目与线路错误。"
+    if custom:
+        text += " 当前为自定义档位，指纹匹配度仅供参考。"
+    return text
 
 
 def build_overall_verdict(
     *,
     juice_summary: dict[str, Any],
-    probability_summary: dict[str, Any] | None,
+    fingerprint_summary: dict[str, Any] | None = None,
     output_integrity_summary: dict[str, Any] | None = None,
     coverage_summary: dict[str, Any] | None = None,
-    probability_enabled: bool = True,
+    fingerprint_enabled: bool = True,
     preset: str = "low",
     official: bool | None = None,
     custom_changes: list[str] | None = None,
     session_id: str | None = None,
     claimed_model: str = "gpt-5.6-sol",
 ) -> dict[str, Any]:
-    probability = probability_summary or {}
+    fingerprint = fingerprint_summary or {}
     output = output_integrity_summary or {}
     coverage = coverage_summary or {}
-    deterministic_anomaly = bool(output.get("hard_anomaly") or coverage.get("hard_anomaly"))
-    juice_mixed = bool(juice_summary.get("juice_mixed"))
-    juice_pass = bool(juice_summary.get("juice_pass"))
-    juice_all_unsuccessful = bool(juice_summary.get("juice_all_unsuccessful"))
-    probability_alert = bool(probability.get("pure_model_alert") or probability.get("mixture_alert"))
-    probability_pass = bool(probability.get("probability_pass"))
+    is_official = bool(official if official is not None else preset != "custom")
+    custom = not is_official
+    reasons = list(fingerprint.get("fingerprint_unclear_reasons") or [])
+    if custom and "custom_probe_reference_only" not in reasons:
+        reasons.append("custom_probe_reference_only")
+    if not fingerprint_enabled and "builtin_fingerprint_not_enabled" not in reasons:
+        reasons.append("builtin_fingerprint_not_enabled")
+    if custom or not fingerprint_enabled:
+        fingerprint = {
+            **fingerprint,
+            "fingerprint_status": "unclear",
+            "fingerprint_model": None,
+            "fingerprint_official_eligible": False,
+        }
+    fingerprint["fingerprint_unclear_reasons"] = reasons
+    fingerprint["fingerprint_unclear_reasons_cn"] = [
+        FINGERPRINT_REASON_CN.get(reason, "指纹层出现未分类的数据问题，请查看技术 JSON。")
+        for reason in reasons
+    ]
 
-    if juice_all_unsuccessful:
-        title = "可能非GPT"
-    elif juice_mixed or deterministic_anomaly:
-        title = "Juice混用"
-    elif not juice_pass:
-        title = None
-    elif juice_pass and probability_enabled and probability_alert:
-        title = "仅概率探针混用"
-    elif juice_pass and (not probability_enabled or probability_pass):
-        title = "通过"
-    else:
-        title = "Juice通过但概率探针证据不足"
+    juice_state = _juice_state(juice_summary, output, coverage)
+    outcome_code, title = _title(juice_state, fingerprint)
+    if outcome_code not in OUTCOME_CODES:
+        raise AssertionError("verdict escaped the seven-outcome set")
 
     failed_items: list[dict[str, Any]] = []
     for event in juice_summary.get("sticky_events", []):
-        failed_items.append({"layer": "juice", "reason": event.get("reason"), "evidence": event.get("evidence")})
-    for row in output.get("failures", []):
-        failed_items.append({"layer": "output_integrity", "reason": row.get("classification"), "evidence": row})
-    for row in coverage.get("failures", []):
-        failed_items.append({"layer": "juice_coverage", "reason": row.get("classification"), "evidence": row})
-    if probability_alert:
         failed_items.append({
-            "layer": "probability",
-            "reason": "mixture" if probability.get("mixture_alert") else "pure_replacement",
-            "winner": probability.get("winner"),
-            "margin": probability.get("score_margin"),
-            "mixture": probability.get("mixture"),
+            "layer": "Juice",
+            "reason_code": "known_model_fingerprint_mismatch",
+            "reason_cn": "检测到与申报型号不一致的已知 Juice 指纹。",
+            "evidence": event.get("evidence"),
         })
-    if probability.get("evidence_insufficient"):
-        failed_items.extend({"layer": "probability", "reason": reason} for reason in probability.get("evidence_insufficient_reasons", []))
+    for row in output.get("failures", []):
+        failed_items.append({
+            "layer": "输出完整性",
+            "reason_code": "output_rewritten_to_40",
+            "reason_cn": "32/48 控制输出被改写为40或40开头的纯数字。",
+            "evidence": row,
+        })
+    for row in coverage.get("failures", []):
+        failed_items.append({
+            "layer": "Juice覆盖检测",
+            "reason_code": "explicit_definition_ignored",
+            "reason_cn": "显式 Juice 定义可能被隐藏提示覆盖。",
+            "evidence": row,
+        })
+    for reason, reason_cn in zip(
+        fingerprint.get("fingerprint_unclear_reasons") or [],
+        fingerprint.get("fingerprint_unclear_reasons_cn") or [],
+    ):
+        failed_item = {
+            "layer": "指纹匹配",
+            "reason_code": reason,
+            "reason_cn": reason_cn,
+        }
+        if reason == "candidate_samples_incomplete":
+            failed_item["incomplete_cells"] = [
+                {"cell": key, **value}
+                for key, value in (fingerprint.get("fingerprint_completeness") or {}).items()
+                if not value.get("complete")
+            ]
+        failed_items.append(failed_item)
     if juice_summary.get("data_insufficient"):
         failed_items.append({
-            "layer": "juice",
-            "reason": "data_incomplete",
+            "layer": "Juice",
+            "reason_code": "juice_data_incomplete",
+            "reason_cn": "至少一个启用思考档没有取得申报型号命中。",
             "missing_current_success_efforts": juice_summary.get("missing_current_success_efforts", []),
             "insufficient_valid_efforts": juice_summary.get("insufficient_valid_efforts", []),
         })
 
     common_causes: list[str] = []
-    if title == "可能非GPT":
-        common_causes.extend(["非 GPT 模型", "响应被统一改写", "参数未透传", "探针被拦截但返回了有效非指纹答案"])
-    if juice_mixed:
-        common_causes.append("同一端点返回了其他 GPT-5.6 或旧 GPT 型号的确定性 Juice 指纹")
-    if output.get("hard_anomaly"):
-        common_causes.append("输出端把 32/48 控制值改写成了 40 或 40 开头的纯数字")
-    if coverage.get("hard_anomaly"):
-        common_causes.append("隐藏 system/developer 规则可能覆盖了显式 Juice 定义")
-    if probability.get("pure_model_alert"):
-        common_causes.append("概率行为整体更接近另一可信纯模型基线")
-    if probability.get("mixture_alert"):
-        common_causes.append("混合分布拟合显著优于任一可信纯模型")
+    if juice_state == "possible_non_gpt":
+        common_causes.extend(["待测端可能不是已知GPT模型", "输出被统一改写", "思考参数未透传", "探针被拦截"])
+    if juice_state == "mismatch":
+        common_causes.extend(["请求被路由到其他型号", "输出改写", "隐藏提示覆盖显式定义", "少量请求发生临时路由漂移"])
+    if fingerprint.get("fingerprint_status") == "strong_match":
+        common_causes.extend(["当前行为分布接近对应可信型号", "官方风控或临时路由也可能改变行为分布"])
+    elif "builtin_fingerprint_not_enabled" in reasons:
+        common_causes.extend(["当前为低档，未启用内置行为指纹探针", "这一层主动不给出型号方向，不代表模型或线路异常"])
+    elif reasons:
+        common_causes.extend(["模型行为落在强指向线以下", "网络错误或缺样", "题面或请求格式不受正式基线支持"])
 
-    is_official = bool(official if official is not None else preset != "custom")
-    custom = not is_official
-    probability_rows = _probability_rows(probability)
-    subtitle = None
-    if title == "通过" and not probability_enabled:
-        subtitle = "未启用概率探针，仅完成Juice与确定性检查"
-    elif title == "Juice通过但概率探针证据不足":
-        subtitle = "未达到正式概率门禁；具体原因见数据完整性与逐探针详情"
-    elif title is None:
-        subtitle = "Juice 数据不足，未形成冻结五状态中的正式结论；网络错误与未知输出不算通过"
-    if custom:
-        subtitle = ((subtitle + "；") if subtitle else "") + "自定义档位测试结果仅供参考"
-
-    result = {
+    fingerprint_rows = _fingerprint_rows(fingerprint)
+    return {
         "overall_verdict": title,
-        "verdict_available": title is not None,
-        "operational_status": "complete" if title is not None else "juice_data_insufficient",
-        "title_cn": (title + ("（自定义参考）" if custom else "")) if title is not None else "未形成正式结论",
-        "subtitle_cn": subtitle,
+        "outcome_code": outcome_code,
+        "verdict_available": True,
+        "operational_status": "complete",
+        "title_cn": title + ("（自定义参考）" if custom else ""),
+        "subtitle_cn": _subtitle(juice_state, fingerprint, custom),
         "preset": preset,
         "custom_preset": custom,
         "official_grade": is_official,
@@ -143,22 +236,21 @@ def build_overall_verdict(
         "custom_changes": list(custom_changes or []),
         "session_id": session_id,
         "claimed_model": claimed_model,
+        "juice_verdict_state": juice_state,
+        "fingerprint_verdict_state": fingerprint.get("fingerprint_status", "unclear"),
+        "fingerprint_model": fingerprint.get("fingerprint_model"),
         "failed_items": failed_items,
         "common_causes": sorted(set(common_causes)),
-        "possible_models": probability_rows,
-        "probability_details": probability_rows,
-        "probability_hard_alert": probability_alert,
+        "possible_models": fingerprint_rows,
+        "fingerprint_details": fingerprint_rows,
         "juice_state": juice_summary.get("state"),
         "juice_quality_warning": bool(juice_summary.get("quality_warning")),
         "quality_note": "Juice 身份判定通过，但有效命中质量偏低" if juice_summary.get("quality_warning") else None,
         "limitations": [
-            "条件相对概率只比较已导入的 Sol/Terra/Luna 可信基线，不是 API 身份的密码学证明",
-            "自定义档位测试结果仅供参考" if custom else "网络错误不计入 Juice 有效响应",
+            "指纹匹配度只比较已导入的Sol/Terra/Luna可信答案分布，不是真实路由概率",
+            "自定义档位测试结果仅供参考" if custom else "网络错误不计入Juice有效响应",
         ],
     }
-    if result["overall_verdict"] is not None and result["overall_verdict"] not in VERDICT_TITLES:
-        raise AssertionError("verdict title escaped the frozen five-state set")
-    return result
 
 
-__all__ = ["VERDICT_TITLES", "build_overall_verdict"]
+__all__ = ["FINGERPRINT_REASON_CN", "MODEL_LABELS", "OUTCOME_CODES", "build_overall_verdict"]

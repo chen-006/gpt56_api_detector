@@ -1,18 +1,9 @@
 {
-  "schema_version": 2,
-  "scoring_version": "trusted-likelihood-v2",
-  "baseline_id": "stage-c-trusted-likelihood-v2",
+  "schema_version": 3,
+  "scoring_version": "trusted-fingerprint-v3",
+  "baseline_id": "stage-c-trusted-fingerprint-v3",
   "smoothing_alpha": 0.5,
-  "tau_grid": [
-    0.0,
-    0.005,
-    0.01,
-    0.02,
-    0.05,
-    0.1,
-    0.2
-  ],
-  "default_tau": 0.0,
+  "completion_ratio": 0.9,
   "models": [
     "gpt-5.6-sol",
     "gpt-5.6-terra",
@@ -1734,592 +1725,304 @@
   },
   "cells_quality": {
     "rand_bird|normal+no_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-terra": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 30,
       "minimum_valid_rate": 1.0,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_total_samples": 120,
+      "minimum_windows": 4
     },
     "rand_bird|native_codex+no_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-terra": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 30,
       "minimum_valid_rate": 1.0,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_total_samples": 120,
+      "minimum_windows": 4
     },
     "rand_bird|normal+fixed_32k_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-terra": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 119,
+          "valid_rate": 0.9916666666666667
         },
         "gpt-5.6-luna": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 0.9666666666666667,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 30,
-      "minimum_valid_rate": 0.9666666666666667,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_valid_rate": 0.9916666666666667,
+      "minimum_total_samples": 120,
+      "minimum_windows": 4
     },
     "rand_bird|native_codex+fixed_32k_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 119,
+          "valid_rate": 0.9916666666666667
         },
         "gpt-5.6-terra": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 119,
+          "valid_rate": 0.9916666666666667
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 0.9666666666666667,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 0.9666666666666667,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 30,
-      "minimum_valid_rate": 0.9666666666666667,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_valid_rate": 0.9916666666666667,
+      "minimum_total_samples": 120,
+      "minimum_windows": 4
     },
     "rand_country|normal+no_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 119,
+          "valid_rate": 0.9916666666666667
         },
         "gpt-5.6-terra": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 0.9666666666666667,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 30,
-      "minimum_valid_rate": 0.9666666666666667,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_valid_rate": 0.9916666666666667,
+      "minimum_total_samples": 120,
+      "minimum_windows": 4
     },
     "rand_country|normal+fixed_32k_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 119,
+          "valid_rate": 0.9916666666666667
         },
         "gpt-5.6-terra": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 0.9666666666666667,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 30,
-      "minimum_valid_rate": 0.9666666666666667,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_valid_rate": 0.9916666666666667,
+      "minimum_total_samples": 120,
+      "minimum_windows": 4
     },
     "rand_country|native_codex+no_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-terra": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 30,
       "minimum_valid_rate": 1.0,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_total_samples": 120,
+      "minimum_windows": 4
     },
     "rand_country|native_codex+fixed_32k_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-terra": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 120,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 30,
-          "2": 30,
-          "3": 30,
-          "4": 30
+          "windows": 4,
+          "total": 120,
+          "valid": 119,
+          "valid_rate": 0.9916666666666667
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 0.9666666666666667,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 30,
-      "minimum_valid_rate": 0.9666666666666667,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_valid_rate": 0.9916666666666667,
+      "minimum_total_samples": 120,
+      "minimum_windows": 4
     },
     "b80_letter_count|normal+no_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         },
         "gpt-5.6-terra": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 20,
       "minimum_valid_rate": 1.0,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_total_samples": 80,
+      "minimum_windows": 4
     },
     "b80_letter_count|native_codex+fixed_32k_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         },
         "gpt-5.6-terra": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 20,
       "minimum_valid_rate": 1.0,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_total_samples": 80,
+      "minimum_windows": 4
     },
     "b80_letter_count|normal+fixed_32k_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 79,
+          "valid_rate": 0.9875
         },
         "gpt-5.6-terra": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 0.95,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 20,
-      "minimum_valid_rate": 0.95,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_valid_rate": 0.9875,
+      "minimum_total_samples": 80,
+      "minimum_windows": 4
     },
     "b80_letter_count|native_codex+no_history": {
-      "sample_counts": {
+      "models": {
         "gpt-5.6-sol": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         },
         "gpt-5.6-terra": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         },
         "gpt-5.6-luna": {
-          "1": 20,
-          "2": 20,
-          "3": 20,
-          "4": 20
+          "windows": 4,
+          "total": 80,
+          "valid": 80,
+          "valid_rate": 1.0
         }
       },
-      "valid_rates": {
-        "gpt-5.6-sol": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-terra": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "gpt-5.6-luna": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        }
-      },
-      "minimum_window_samples": 20,
       "minimum_valid_rate": 1.0,
-      "window_count_by_model": {
-        "gpt-5.6-sol": 4,
-        "gpt-5.6-terra": 4,
-        "gpt-5.6-luna": 4
-      }
+      "minimum_total_samples": 80,
+      "minimum_windows": 4
     }
   },
   "cells": {
@@ -2332,6 +2035,22 @@
         "kestrel",
         "kingfisher"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "kingfisher": 90,
+          "kestrel": 30
+        },
+        "gpt-5.6-terra": {
+          "kestrel": 110,
+          "kingfisher": 10
+        },
+        "gpt-5.6-luna": {
+          "kingfisher": 100,
+          "kestrel": 18,
+          "falcon": 1,
+          "heron": 1
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.0040650406504065045,
@@ -2358,44 +2077,15 @@
           "kingfisher": 0.8170731707317073
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.0040650406504065045,
-        "__OTHER__": 0.0040650406504065045,
-        "falcon": 0.006775067750677506,
-        "heron": 0.006775067750677506,
-        "kestrel": 0.4322493224932249,
-        "kingfisher": 0.5460704607046071
-      },
       "between_model_jsd": 0.2771529648234734,
       "within_model_jsd": 0.01682107660666848,
-      "tau": 0.0,
       "weight": 0.9393076072002972,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.0040650406504065045,
-          "__OTHER__": 0.0040650406504065045,
-          "falcon": 0.004229518679673991,
-          "heron": 0.004229518679673991,
-          "kestrel": 0.2591519856649859,
-          "kingfisher": 0.7242588956748531
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.0040650406504065045,
-          "__OTHER__": 0.0040650406504065045,
-          "falcon": 0.004229518679673991,
-          "heron": 0.004229518679673991,
-          "kestrel": 0.8700837627058295,
-          "kingfisher": 0.11332711863400943
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.0040650406504065045,
-          "__OTHER__": 0.0040650406504065045,
-          "falcon": 0.011866165892684539,
-          "heron": 0.011866165892684539,
-          "kestrel": 0.16751221910885936,
-          "kingfisher": 0.8006253678049585
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "rand_bird|native_codex+no_history": {
       "categories": [
@@ -2412,6 +2102,28 @@
         "robin",
         "sparrow"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "kingfisher": 112,
+          "kestrel": 8
+        },
+        "gpt-5.6-terra": {
+          "kestrel": 100,
+          "kingfisher": 17,
+          "peregrine": 2,
+          "albatross": 1
+        },
+        "gpt-5.6-luna": {
+          "kingfisher": 92,
+          "falcon": 7,
+          "kestrel": 9,
+          "sparrow": 3,
+          "puffin": 1,
+          "robin": 1,
+          "heron": 2,
+          "penguin": 5
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.003968253968253968,
@@ -2456,68 +2168,15 @@
           "sparrow": 0.027777777777777776
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.003968253968253968,
-        "__OTHER__": 0.003968253968253968,
-        "albatross": 0.006613756613756613,
-        "falcon": 0.022486772486772486,
-        "heron": 0.009259259259259259,
-        "kestrel": 0.3134920634920635,
-        "kingfisher": 0.5886243386243386,
-        "penguin": 0.017195767195767195,
-        "peregrine": 0.009259259259259259,
-        "puffin": 0.006613756613756613,
-        "robin": 0.006613756613756613,
-        "sparrow": 0.011904761904761904
-      },
       "between_model_jsd": 0.3371064086419097,
       "within_model_jsd": 0.019921083450150173,
-      "tau": 0.0,
       "weight": 0.9409056519263291,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.003968253968253968,
-          "__OTHER__": 0.003968253968253968,
-          "albatross": 0.004124588222417119,
-          "falcon": 0.005062593747396021,
-          "heron": 0.004280922476580269,
-          "kestrel": 0.08199940309749044,
-          "kingfisher": 0.8748787036283806,
-          "penguin": 0.00474992523906972,
-          "peregrine": 0.004280922476580269,
-          "puffin": 0.004124588222417119,
-          "robin": 0.004124588222417119,
-          "sparrow": 0.004437256730743419
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.003968253968253968,
-          "__OTHER__": 0.003968253968253968,
-          "albatross": 0.011592093396435604,
-          "falcon": 0.005062593747396021,
-          "heron": 0.004280922476580269,
-          "kestrel": 0.7690098791071912,
-          "kingfisher": 0.16546571209662447,
-          "penguin": 0.00474992523906972,
-          "peregrine": 0.01921593282461724,
-          "puffin": 0.004124588222417119,
-          "robin": 0.004124588222417119,
-          "sparrow": 0.004437256730743419
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.003968253968253968,
-          "__OTHER__": 0.003968253968253968,
-          "albatross": 0.004124588222417119,
-          "falcon": 0.057335129965525415,
-          "heron": 0.01921593282461724,
-          "kestrel": 0.08946690827150894,
-          "kingfisher": 0.7255286001480108,
-          "penguin": 0.04208745110916214,
-          "peregrine": 0.004280922476580269,
-          "puffin": 0.011592093396435604,
-          "robin": 0.011592093396435604,
-          "sparrow": 0.026839772252798873
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "rand_bird|normal+fixed_32k_history": {
       "categories": [
@@ -2534,6 +2193,30 @@
         "sparrow",
         "wren"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "kingfisher": 114,
+          "kestrel": 6
+        },
+        "gpt-5.6-terra": {
+          "kestrel": 95,
+          "__INVALID_OUTPUT__": 1,
+          "kingfisher": 3,
+          "falcon": 18,
+          "plover": 1,
+          "albatross": 1,
+          "wren": 1
+        },
+        "gpt-5.6-luna": {
+          "heron": 54,
+          "kingfisher": 26,
+          "kestrel": 27,
+          "falcon": 4,
+          "sparrow": 7,
+          "raven": 1,
+          "osprey": 1
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.003968253968253968,
@@ -2578,68 +2261,15 @@
           "wren": 0.003968253968253968
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.006613756613756613,
-        "__OTHER__": 0.003968253968253968,
-        "albatross": 0.006613756613756613,
-        "falcon": 0.06216931216931217,
-        "heron": 0.14682539682539683,
-        "kestrel": 0.34259259259259256,
-        "kingfisher": 0.38227513227513227,
-        "osprey": 0.006613756613756613,
-        "plover": 0.006613756613756613,
-        "raven": 0.006613756613756613,
-        "sparrow": 0.022486772486772486,
-        "wren": 0.006613756613756613
-      },
       "between_model_jsd": 0.529212588512718,
       "within_model_jsd": 0.03257663205634192,
-      "tau": 0.0,
       "weight": 0.9384432026685264,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.004131102638443051,
-          "__OTHER__": 0.003968253968253968,
-          "albatross": 0.004131102638443051,
-          "falcon": 0.0075509247124138056,
-          "heron": 0.012762082158464477,
-          "kestrel": 0.06950065530810078,
-          "kingfisher": 0.876323273362531,
-          "osprey": 0.004131102638443051,
-          "plover": 0.004131102638443051,
-          "raven": 0.004131102638443051,
-          "sparrow": 0.005108194659577552,
-          "wren": 0.004131102638443051
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.011579064564383738,
-          "__OTHER__": 0.003968253968253968,
-          "albatross": 0.011579064564383738,
-          "falcon": 0.14161423937934614,
-          "heron": 0.012762082158464477,
-          "kestrel": 0.7323692667168218,
-          "kingfisher": 0.049599499583114964,
-          "osprey": 0.004131102638443051,
-          "plover": 0.011579064564383738,
-          "raven": 0.004131102638443051,
-          "sparrow": 0.005108194659577552,
-          "wren": 0.011579064564383738
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.004131102638443051,
-          "__OTHER__": 0.003968253968253968,
-          "albatross": 0.004131102638443051,
-          "falcon": 0.03734277241617655,
-          "heron": 0.4149520261592615,
-          "kestrel": 0.22590785575285516,
-          "kingfisher": 0.22090262387975074,
-          "osprey": 0.011579064564383738,
-          "plover": 0.004131102638443051,
-          "raven": 0.011579064564383738,
-          "sparrow": 0.05724392814116235,
-          "wren": 0.004131102638443051
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "rand_bird|native_codex+fixed_32k_history": {
       "categories": [
@@ -2654,6 +2284,30 @@
         "sparrow",
         "wren"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "kingfisher": 109,
+          "kestrel": 10,
+          "__INVALID_OUTPUT__": 1
+        },
+        "gpt-5.6-terra": {
+          "kestrel": 100,
+          "falcon": 12,
+          "osprey": 4,
+          "heron": 1,
+          "wren": 2,
+          "kingfisher": 1
+        },
+        "gpt-5.6-luna": {
+          "heron": 33,
+          "__INVALID_OUTPUT__": 1,
+          "kingfisher": 34,
+          "kestrel": 13,
+          "sparrow": 31,
+          "falcon": 7,
+          "penguin": 1
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.012,
@@ -2692,60 +2346,15 @@
           "wren": 0.004
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.009333333333333334,
-        "__OTHER__": 0.004,
-        "falcon": 0.05466666666666667,
-        "heron": 0.09466666666666668,
-        "kestrel": 0.332,
-        "kingfisher": 0.38799999999999996,
-        "osprey": 0.014666666666666666,
-        "penguin": 0.006666666666666667,
-        "sparrow": 0.08666666666666667,
-        "wren": 0.009333333333333334
-      },
       "between_model_jsd": 0.5463948019280273,
       "within_model_jsd": 0.02393502992080399,
-      "tau": 0.0,
       "weight": 0.956194623674409,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.011883185663131759,
-          "__OTHER__": 0.004,
-          "falcon": 0.006219472400496612,
-          "heron": 0.00797168745352025,
-          "kestrel": 0.09486373332874658,
-          "kingfisher": 0.8546229763531116,
-          "osprey": 0.004467257347472971,
-          "penguin": 0.004116814336868243,
-          "sparrow": 0.007621244442915523,
-          "wren": 0.004233628673736486
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.004233628673736486,
-          "__OTHER__": 0.004,
-          "falcon": 0.09801415627323988,
-          "heron": 0.015621244442915523,
-          "kestrel": 0.7833238623743211,
-          "kingfisher": 0.028470821498422214,
-          "osprey": 0.03506548530505405,
-          "penguin": 0.004116814336868243,
-          "sparrow": 0.007621244442915523,
-          "wren": 0.019532742652527028
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.011883185663131759,
-          "__OTHER__": 0.004,
-          "falcon": 0.05976637132626351,
-          "heron": 0.2604070681035643,
-          "kestrel": 0.11781240429693239,
-          "kingfisher": 0.2809062021484662,
-          "osprey": 0.004467257347472971,
-          "penguin": 0.011766371326263516,
-          "sparrow": 0.24475751111416896,
-          "wren": 0.004233628673736486
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "rand_country|normal+no_history": {
       "categories": [
@@ -2769,6 +2378,46 @@
         "suriname",
         "uruguay"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "uruguay": 65,
+          "portugal": 16,
+          "__INVALID_OUTPUT__": 1,
+          "namibia": 13,
+          "suriname": 2,
+          "madagascar": 9,
+          "botswana": 1,
+          "mongolia": 4,
+          "laos": 1,
+          "bhutan": 4,
+          "mozambique": 1,
+          "paraguay": 2,
+          "slovenia": 1
+        },
+        "gpt-5.6-terra": {
+          "bhutan": 36,
+          "suriname": 52,
+          "lesotho": 15,
+          "paraguay": 3,
+          "namibia": 6,
+          "laos": 3,
+          "uruguay": 4,
+          "chile": 1
+        },
+        "gpt-5.6-luna": {
+          "mongolia": 51,
+          "namibia": 10,
+          "bhutan": 37,
+          "madagascar": 4,
+          "laos": 6,
+          "botswana": 2,
+          "uruguay": 2,
+          "nepal": 4,
+          "morocco": 2,
+          "portugal": 1,
+          "peru": 1
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.011583011583011582,
@@ -2834,96 +2483,15 @@
           "uruguay": 0.019305019305019305
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.006435006435006435,
-        "__OTHER__": 0.0038610038610038615,
-        "bhutan": 0.20205920205920205,
-        "botswana": 0.011583011583011582,
-        "chile": 0.006435006435006435,
-        "laos": 0.029601029601029602,
-        "lesotho": 0.04247104247104247,
-        "madagascar": 0.03732303732303733,
-        "mongolia": 0.1454311454311454,
-        "morocco": 0.009009009009009009,
-        "mozambique": 0.006435006435006435,
-        "namibia": 0.07850707850707851,
-        "nepal": 0.014157014157014156,
-        "paraguay": 0.01673101673101673,
-        "peru": 0.006435006435006435,
-        "portugal": 0.047619047619047616,
-        "slovenia": 0.006435006435006435,
-        "suriname": 0.14285714285714288,
-        "uruguay": 0.1866151866151866
-      },
       "between_model_jsd": 0.5130867797035997,
       "within_model_jsd": 0.04467457441381206,
-      "tau": 0.0,
       "weight": 0.9129297885250138,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.011134773686100457,
-          "__OTHER__": 0.003861003861003861,
-          "bhutan": 0.049316766398646336,
-          "botswana": 0.011583011583011582,
-          "chile": 0.004085122809459424,
-          "laos": 0.013151844222200521,
-          "lesotho": 0.007222788087837304,
-          "madagascar": 0.07022140808069549,
-          "mongolia": 0.044386149532623945,
-          "morocco": 0.004309241757914987,
-          "mozambique": 0.011134773686100457,
-          "namibia": 0.10200591476254861,
-          "nepal": 0.004757479654826112,
-          "paraguay": 0.01908090035656374,
-          "peru": 0.004085122809459424,
-          "portugal": 0.12046544001100495,
-          "slovenia": 0.011134773686100457,
-          "suriname": 0.030062728830886325,
-          "uruguay": 0.478000756183016
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.004085122809459424,
-          "__OTHER__": 0.003861003861003861,
-          "bhutan": 0.2749055944511594,
-          "botswana": 0.004533360706370549,
-          "chile": 0.011134773686100457,
-          "laos": 0.02725114597548259,
-          "lesotho": 0.1129675512374528,
-          "madagascar": 0.006774550190926178,
-          "mongolia": 0.016187546026059815,
-          "morocco": 0.004309241757914987,
-          "mozambique": 0.004085122809459424,
-          "namibia": 0.052658358626061386,
-          "nepal": 0.004757479654826112,
-          "paraguay": 0.026130551233204777,
-          "peru": 0.004085122809459424,
-          "portugal": 0.007671025984748429,
-          "slovenia": 0.004085122809459424,
-          "suriname": 0.38254527266293803,
-          "uruguay": 0.04797205270791295
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.004085122809459424,
-          "__OTHER__": 0.003861003861003861,
-          "bhutan": 0.2819552453278004,
-          "botswana": 0.018632662459652616,
-          "chile": 0.004085122809459424,
-          "laos": 0.04840009860540569,
-          "lesotho": 0.007222788087837304,
-          "madagascar": 0.03497315369749031,
-          "mongolia": 0.3757197407347525,
-          "morocco": 0.018408543511197053,
-          "mozambique": 0.004085122809459424,
-          "namibia": 0.08085696213262553,
-          "nepal": 0.032956083161390246,
-          "paraguay": 0.004981598603281675,
-          "peru": 0.011134773686100457,
-          "portugal": 0.014720676861389462,
-          "slovenia": 0.004085122809459424,
-          "suriname": 0.01596342707760426,
-          "uruguay": 0.033872750954630895
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "rand_country|normal+fixed_32k_history": {
       "categories": [
@@ -2948,6 +2516,42 @@
         "suriname",
         "uruguay"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "portugal": 20,
+          "uruguay": 90,
+          "__INVALID_OUTPUT__": 1,
+          "botswana": 4,
+          "namibia": 3,
+          "suriname": 1,
+          "peru": 1
+        },
+        "gpt-5.6-terra": {
+          "suriname": 35,
+          "lesotho": 41,
+          "paraguay": 5,
+          "bhutan": 23,
+          "malawi": 3,
+          "laos": 6,
+          "namibia": 5,
+          "ghana": 1,
+          "peru": 1
+        },
+        "gpt-5.6-luna": {
+          "laos": 9,
+          "canada": 1,
+          "botswana": 6,
+          "mongolia": 41,
+          "bhutan": 39,
+          "chile": 6,
+          "ecuador": 3,
+          "namibia": 10,
+          "ghana": 2,
+          "nepal": 1,
+          "peru": 1,
+          "morocco": 1
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.011538461538461539,
@@ -3016,100 +2620,15 @@
           "uruguay": 0.0038461538461538464
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.006410256410256411,
-        "__OTHER__": 0.0038461538461538464,
-        "bhutan": 0.16282051282051282,
-        "botswana": 0.02948717948717949,
-        "canada": 0.006410256410256411,
-        "chile": 0.019230769230769232,
-        "ecuador": 0.011538461538461539,
-        "ghana": 0.011538461538461539,
-        "laos": 0.0423076923076923,
-        "lesotho": 0.10897435897435896,
-        "malawi": 0.011538461538461539,
-        "mongolia": 0.10897435897435896,
-        "morocco": 0.006410256410256411,
-        "namibia": 0.05000000000000001,
-        "nepal": 0.006410256410256411,
-        "paraguay": 0.016666666666666666,
-        "peru": 0.011538461538461539,
-        "portugal": 0.05512820512820513,
-        "suriname": 0.09615384615384615,
-        "uruguay": 0.2346153846153846
-      },
       "between_model_jsd": 0.6818318022280064,
       "within_model_jsd": 0.04079486747261601,
-      "tau": 0.0,
       "weight": 0.9401687229323837,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.011231634476576328,
-          "__OTHER__": 0.0038461538461538464,
-          "bhutan": 0.013357792764595408,
-          "botswana": 0.03430855755349941,
-          "canada": 0.003999567377096452,
-          "chile": 0.004766635031809481,
-          "ecuador": 0.004306394438981664,
-          "ghana": 0.004306394438981664,
-          "laos": 0.006147356810292933,
-          "lesotho": 0.010136108614800684,
-          "malawi": 0.004306394438981664,
-          "mongolia": 0.010136108614800684,
-          "morocco": 0.003999567377096452,
-          "namibia": 0.028303798701560377,
-          "nepal": 0.003999567377096452,
-          "paraguay": 0.004613221500866876,
-          "peru": 0.011538461538461539,
-          "portugal": 0.15155576645460345,
-          "suriname": 0.016601108059567528,
-          "uruguay": 0.6685394105841771
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.003999567377096452,
-          "__OTHER__": 0.0038461538461538464,
-          "bhutan": 0.17969533605263255,
-          "botswana": 0.005380289155579905,
-          "canada": 0.003999567377096452,
-          "chile": 0.004766635031809481,
-          "ecuador": 0.004306394438981664,
-          "ghana": 0.011538461538461539,
-          "laos": 0.04953975940717219,
-          "lesotho": 0.30665085969347555,
-          "malawi": 0.02600259573742129,
-          "mongolia": 0.010136108614800684,
-          "morocco": 0.003999567377096452,
-          "namibia": 0.042767932900520125,
-          "nepal": 0.003999567377096452,
-          "paraguay": 0.04077355699826625,
-          "peru": 0.011538461538461539,
-          "portugal": 0.006914424465005962,
-          "suriname": 0.26249138944188327,
-          "uruguay": 0.017653371630988367
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.003999567377096452,
-          "__OTHER__": 0.0038461538461538464,
-          "bhutan": 0.29540840964431053,
-          "botswana": 0.04877269175245916,
-          "canada": 0.011231634476576328,
-          "chile": 0.048159037628688735,
-          "ecuador": 0.02600259573742129,
-          "ghana": 0.018770528637941413,
-          "laos": 0.07123596070561182,
-          "lesotho": 0.010136108614800684,
-          "malawi": 0.004306394438981664,
-          "mongolia": 0.30665085969347555,
-          "morocco": 0.011231634476576328,
-          "namibia": 0.0789282683979195,
-          "nepal": 0.011231634476576328,
-          "paraguay": 0.004613221500866876,
-          "peru": 0.011538461538461539,
-          "portugal": 0.006914424465005962,
-          "suriname": 0.009369040960087654,
-          "uruguay": 0.017653371630988367
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "rand_country|native_codex+no_history": {
       "categories": [
@@ -3135,6 +2654,43 @@
         "suriname",
         "uruguay"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "namibia": 30,
+          "uruguay": 77,
+          "bhutan": 4,
+          "portugal": 5,
+          "madagascar": 2,
+          "suriname": 1,
+          "mongolia": 1
+        },
+        "gpt-5.6-terra": {
+          "bhutan": 82,
+          "namibia": 4,
+          "laos": 9,
+          "lesotho": 14,
+          "suriname": 7,
+          "paraguay": 2,
+          "nepal": 1,
+          "uruguay": 1
+        },
+        "gpt-5.6-luna": {
+          "bhutan": 53,
+          "laos": 5,
+          "mongolia": 32,
+          "namibia": 8,
+          "botswana": 6,
+          "uruguay": 1,
+          "morocco": 1,
+          "malta": 1,
+          "chile": 3,
+          "kazakhstan": 3,
+          "madagascar": 2,
+          "mauritius": 1,
+          "peru": 3,
+          "iceland": 1
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.0038314176245210726,
@@ -3206,104 +2762,15 @@
           "uruguay": 0.011494252873563218
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.0038314176245210726,
-        "__OTHER__": 0.0038314176245210726,
-        "bhutan": 0.35887611749680715,
-        "botswana": 0.019157088122605363,
-        "chile": 0.011494252873563218,
-        "iceland": 0.006385696040868454,
-        "kazakhstan": 0.011494252873563218,
-        "laos": 0.03959131545338442,
-        "lesotho": 0.039591315453384415,
-        "madagascar": 0.014048531289910599,
-        "malta": 0.006385696040868454,
-        "mauritius": 0.006385696040868454,
-        "mongolia": 0.08812260536398468,
-        "morocco": 0.006385696040868454,
-        "namibia": 0.1111111111111111,
-        "nepal": 0.006385696040868454,
-        "paraguay": 0.008939974457215836,
-        "peru": 0.011494252873563218,
-        "portugal": 0.016602809706257982,
-        "suriname": 0.02426564495530013,
-        "uruguay": 0.20561941251596424
-      },
       "between_model_jsd": 0.5072457626092867,
       "within_model_jsd": 0.04325827527332989,
-      "tau": 0.0,
       "weight": 0.9147192969127863,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.0038314176245210726,
-          "__OTHER__": 0.0038314176245210726,
-          "bhutan": 0.06214725234246779,
-          "botswana": 0.005138401579880669,
-          "chile": 0.004484909602200871,
-          "iceland": 0.004049248283747672,
-          "kazakhstan": 0.004484909602200871,
-          "laos": 0.006881046853693466,
-          "lesotho": 0.006881046853693465,
-          "madagascar": 0.018721426804152164,
-          "malta": 0.004049248283747672,
-          "mauritius": 0.004049248283747672,
-          "mongolia": 0.018029172650361202,
-          "morocco": 0.004049248283747672,
-          "namibia": 0.22326060345290866,
-          "nepal": 0.004049248283747672,
-          "paraguay": 0.004267078942974271,
-          "peru": 0.004484909602200871,
-          "portugal": 0.03996728727746581,
-          "suriname": 0.012583406169696216,
-          "uruguay": 0.5607594715983232
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.0038314176245210726,
-          "__OTHER__": 0.0038314176245210726,
-          "bhutan": 0.6088760275087308,
-          "botswana": 0.005138401579880669,
-          "chile": 0.004484909602200871,
-          "iceland": 0.004049248283747672,
-          "kazakhstan": 0.004484909602200871,
-          "laos": 0.06996513629595459,
-          "lesotho": 0.10501185265276632,
-          "madagascar": 0.00470274026142747,
-          "malta": 0.004049248283747672,
-          "mauritius": 0.004049248283747672,
-          "mongolia": 0.011019829378998855,
-          "morocco": 0.004049248283747672,
-          "namibia": 0.04101767839748764,
-          "nepal": 0.01105859155511002,
-          "paraguay": 0.018285765485698963,
-          "peru": 0.004484909602200871,
-          "portugal": 0.00492057092065407,
-          "suriname": 0.054639465797870296,
-          "uruguay": 0.02804938297478478
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.0038314176245210726,
-          "__OTHER__": 0.0038314176245210726,
-          "bhutan": 0.4056050726392228,
-          "botswana": 0.047194461208054754,
-          "chile": 0.025512939416287912,
-          "iceland": 0.01105859155511002,
-          "kazakhstan": 0.025512939416287912,
-          "laos": 0.0419277632105052,
-          "lesotho": 0.006881046853693465,
-          "madagascar": 0.018721426804152164,
-          "malta": 0.01105859155511002,
-          "mauritius": 0.01105859155511002,
-          "mongolia": 0.23531881406259395,
-          "morocco": 0.01105859155511002,
-          "namibia": 0.06905505148293702,
-          "nepal": 0.004049248283747672,
-          "paraguay": 0.004267078942974271,
-          "peru": 0.025512939416287912,
-          "portugal": 0.00492057092065407,
-          "suriname": 0.0055740628983338685,
-          "uruguay": 0.02804938297478478
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "rand_country|native_codex+fixed_32k_history": {
       "categories": [
@@ -3327,6 +2794,45 @@
         "suriname",
         "uruguay"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "uruguay": 102,
+          "namibia": 12,
+          "portugal": 4,
+          "paraguay": 1,
+          "botswana": 1
+        },
+        "gpt-5.6-terra": {
+          "chile": 6,
+          "bhutan": 59,
+          "suriname": 17,
+          "nepal": 4,
+          "malawi": 1,
+          "lesotho": 11,
+          "laos": 13,
+          "paraguay": 1,
+          "peru": 3,
+          "gabon": 1,
+          "ghana": 1,
+          "portugal": 2,
+          "uruguay": 1
+        },
+        "gpt-5.6-luna": {
+          "mongolia": 47,
+          "laos": 11,
+          "chile": 10,
+          "botswana": 2,
+          "__INVALID_OUTPUT__": 1,
+          "namibia": 8,
+          "bhutan": 27,
+          "nepal": 3,
+          "ghana": 1,
+          "uruguay": 3,
+          "morocco": 2,
+          "peru": 3,
+          "portugal": 2
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.003861003861003861,
@@ -3392,96 +2898,15 @@
           "uruguay": 0.02702702702702703
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.006435006435006435,
-        "__OTHER__": 0.0038610038610038615,
-        "bhutan": 0.22522522522522523,
-        "botswana": 0.011583011583011582,
-        "chile": 0.04504504504504505,
-        "gabon": 0.006435006435006435,
-        "ghana": 0.009009009009009009,
-        "laos": 0.06563706563706563,
-        "lesotho": 0.032175032175032175,
-        "malawi": 0.006435006435006435,
-        "mongolia": 0.12483912483912483,
-        "morocco": 0.009009009009009009,
-        "namibia": 0.055341055341055344,
-        "nepal": 0.02187902187902188,
-        "paraguay": 0.009009009009009009,
-        "peru": 0.019305019305019305,
-        "portugal": 0.02445302445302445,
-        "suriname": 0.04761904761904762,
-        "uruguay": 0.2767052767052767
-      },
       "between_model_jsd": 0.6020427432039522,
       "within_model_jsd": 0.03969652949132336,
-      "tau": 0.0,
       "weight": 0.9340636027268324,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.00403072431730545,
-          "__OTHER__": 0.003861003861003861,
-          "bhutan": 0.018456963102940573,
-          "botswana": 0.011583011583011582,
-          "chile": 0.006576531161829296,
-          "gabon": 0.00403072431730545,
-          "ghana": 0.004200444773607041,
-          "laos": 0.007934294812242011,
-          "lesotho": 0.005727928880321347,
-          "malawi": 0.00403072431730545,
-          "mongolia": 0.011837865307178574,
-          "morocco": 0.004200444773607041,
-          "namibia": 0.09380956922427108,
-          "nepal": 0.005049047055114989,
-          "paraguay": 0.011413291126709992,
-          "peru": 0.004879326598813399,
-          "portugal": 0.03407015292382839,
-          "suriname": 0.006746251618130885,
-          "uruguay": 0.7575617002454735
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.00403072431730545,
-          "__OTHER__": 0.003861003861003861,
-          "bhutan": 0.4440148979360148,
-          "botswana": 0.00437016522990863,
-          "chile": 0.049853609280447006,
-          "gabon": 0.011243570670408404,
-          "ghana": 0.011413291126709992,
-          "laos": 0.10170129740258041,
-          "lesotho": 0.08506923876445384,
-          "malawi": 0.011243570670408404,
-          "mongolia": 0.011837865307178574,
-          "morocco": 0.004200444773607041,
-          "namibia": 0.007255412987035654,
-          "nepal": 0.033900432467526796,
-          "paraguay": 0.011413291126709992,
-          "peru": 0.02651786565812226,
-          "portugal": 0.019644460217622485,
-          "suriname": 0.12936463962088107,
-          "uruguay": 0.02906421858207532
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.011243570670408404,
-          "__OTHER__": 0.003861003861003861,
-          "bhutan": 0.2132038146367203,
-          "botswana": 0.018795857936114536,
-          "chile": 0.07870499469285883,
-          "gabon": 0.00403072431730545,
-          "ghana": 0.011413291126709992,
-          "laos": 0.0872756046963745,
-          "lesotho": 0.005727928880321347,
-          "malawi": 0.00403072431730545,
-          "mongolia": 0.35084164390301736,
-          "morocco": 0.018626137479812947,
-          "namibia": 0.06495818381185926,
-          "nepal": 0.026687586114423848,
-          "paraguay": 0.004200444773607041,
-          "peru": 0.02651786565812226,
-          "portugal": 0.019644460217622485,
-          "suriname": 0.006746251618130885,
-          "uruguay": 0.043489911288281224
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "b80_letter_count|normal+no_history": {
       "categories": [
@@ -3490,6 +2915,18 @@
         "exact_3",
         "other_integer"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "exact_3": 80
+        },
+        "gpt-5.6-terra": {
+          "exact_3": 80
+        },
+        "gpt-5.6-luna": {
+          "other_integer": 70,
+          "exact_3": 10
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.006097560975609756,
@@ -3510,36 +2947,15 @@
           "other_integer": 0.8597560975609756
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.006097560975609757,
-        "__OTHER__": 0.006097560975609757,
-        "exact_3": 0.6971544715447154,
-        "other_integer": 0.29065040650406504
-      },
       "between_model_jsd": 0.45022420418132025,
       "within_model_jsd": 0.0037103886156890924,
-      "tau": 0.0,
       "weight": 0.9917587979916894,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.006097560975609756,
-          "__OTHER__": 0.006097560975609756,
-          "exact_3": 0.9793622595911311,
-          "other_integer": 0.008442618457649351
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.006097560975609756,
-          "__OTHER__": 0.006097560975609756,
-          "exact_3": 0.9793622595911311,
-          "other_integer": 0.008442618457649351
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.006097560975609756,
-          "__OTHER__": 0.006097560975609756,
-          "exact_3": 0.13273889545188408,
-          "other_integer": 0.8550659825968964
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "b80_letter_count|native_codex+fixed_32k_history": {
       "categories": [
@@ -3547,6 +2963,17 @@
         "__OTHER__",
         "exact_3"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "exact_3": 80
+        },
+        "gpt-5.6-terra": {
+          "exact_3": 80
+        },
+        "gpt-5.6-luna": {
+          "exact_3": 80
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.006134969325153374,
@@ -3564,32 +2991,15 @@
           "exact_3": 0.9877300613496932
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.006134969325153374,
-        "__OTHER__": 0.006134969325153374,
-        "exact_3": 0.9877300613496932
-      },
       "between_model_jsd": 0.0,
       "within_model_jsd": 0.0,
-      "tau": 0.0,
       "weight": 0.0,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.006134969325153374,
-          "__OTHER__": 0.006134969325153374,
-          "exact_3": 0.9877300613496932
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.006134969325153374,
-          "__OTHER__": 0.006134969325153374,
-          "exact_3": 0.9877300613496932
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.006134969325153374,
-          "__OTHER__": 0.006134969325153374,
-          "exact_3": 0.9877300613496932
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "b80_letter_count|normal+fixed_32k_history": {
       "categories": [
@@ -3597,6 +3007,18 @@
         "__OTHER__",
         "exact_3"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "exact_3": 79,
+          "__INVALID_OUTPUT__": 1
+        },
+        "gpt-5.6-terra": {
+          "exact_3": 80
+        },
+        "gpt-5.6-luna": {
+          "exact_3": 80
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.018404907975460124,
@@ -3614,32 +3036,15 @@
           "exact_3": 0.9877300613496932
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.010224948875255624,
-        "__OTHER__": 0.006134969325153374,
-        "exact_3": 0.983640081799591
-      },
       "between_model_jsd": 0.0015621766970824703,
       "within_model_jsd": 0.001532865573921713,
-      "tau": 0.0,
       "weight": 0.018763001148012895,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.01037842945724346,
-          "__OTHER__": 0.006134969325153374,
-          "exact_3": 0.9834866012176031
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.010148208584261706,
-          "__OTHER__": 0.006134969325153374,
-          "exact_3": 0.9837168220905849
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.010148208584261706,
-          "__OTHER__": 0.006134969325153374,
-          "exact_3": 0.9837168220905849
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     },
     "b80_letter_count|native_codex+no_history": {
       "categories": [
@@ -3648,6 +3053,18 @@
         "exact_3",
         "other_integer"
       ],
+      "model_counts": {
+        "gpt-5.6-sol": {
+          "exact_3": 80
+        },
+        "gpt-5.6-terra": {
+          "exact_3": 80
+        },
+        "gpt-5.6-luna": {
+          "exact_3": 69,
+          "other_integer": 11
+        }
+      },
       "model_distributions": {
         "gpt-5.6-sol": {
           "__INVALID_OUTPUT__": 0.006097560975609756,
@@ -3668,106 +3085,22 @@
           "other_integer": 0.1402439024390244
         }
       },
-      "pooled_distribution": {
-        "__INVALID_OUTPUT__": 0.006097560975609757,
-        "__OTHER__": 0.006097560975609757,
-        "exact_3": 0.9369918699186992,
-        "other_integer": 0.05081300813008131
-      },
       "between_model_jsd": 0.038958626642805284,
       "within_model_jsd": 0.003635428425083765,
-      "tau": 0.0,
       "weight": 0.9066848927089903,
-      "used_distributions": {
-        "gpt-5.6-sol": {
-          "__INVALID_OUTPUT__": 0.006097560975609756,
-          "__OTHER__": 0.006097560975609756,
-          "exact_3": 0.9775346903243857,
-          "other_integer": 0.010270187724394742
-        },
-        "gpt-5.6-terra": {
-          "__INVALID_OUTPUT__": 0.006097560975609756,
-          "__OTHER__": 0.006097560975609756,
-          "exact_3": 0.9775346903243857,
-          "other_integer": 0.010270187724394742
-        },
-        "gpt-5.6-luna": {
-          "__INVALID_OUTPUT__": 0.006097560975609756,
-          "__OTHER__": 0.006097560975609756,
-          "exact_3": 0.855906229107326,
-          "other_integer": 0.13189864894145442
-        }
-      }
+      "windows_by_model": {
+        "gpt-5.6-sol": 4,
+        "gpt-5.6-terra": 4,
+        "gpt-5.6-luna": 4
+      },
+      "time_stability_verified": true
     }
   },
-  "calibrations": {
+  "runtime_contracts": {
     "bdbf9486229598554f983daecf65370696d32e5097b563fe809d74202acf0e77": {
-      "tau": 0.0,
-      "formal_eligible": true,
-      "pass_margin": 1e-12,
-      "alert_margin": 1e-12,
-      "mixture_gain_threshold": 0.3843413834520417,
-      "pass_metrics": {
-        "accepted": 600,
-        "correct": 600,
-        "errors": 0,
-        "error_rate": 0.0,
-        "error_wilson95_upper": 0.00636170101370071,
-        "coverage_overall": 1.0,
-        "coverage_by_window": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "coverage_worst_window": 1.0,
-        "error_rate_by_window": {
-          "1": 0.0,
-          "2": 0.0,
-          "3": 0.0,
-          "4": 0.0
-        },
-        "error_rate_worst_window": 0.0
-      },
-      "alert_metrics": {
-        "false_alerts": 0,
-        "total": 600,
-        "wilson95_upper": 0.00636170101370071
-      },
-      "mixture_metrics": {
-        "false_alerts": 1,
-        "total": 600,
-        "wilson95_upper": 0.009379560476138811
-      },
-      "temperature": 0.05,
-      "multiclass_log_loss": 2.774390795565238e-07,
-      "ood_thresholds": {
-        "rand_country|normal+no_history": -2.299096337440711,
-        "b80_letter_count|normal+no_history": -0.8804319918424434
-      },
-      "confusion_matrix": {
-        "gpt-5.6-sol": {
-          "gpt-5.6-sol": 200,
-          "gpt-5.6-terra": 0,
-          "gpt-5.6-luna": 0,
-          "abstain": 0
-        },
-        "gpt-5.6-terra": {
-          "gpt-5.6-sol": 0,
-          "gpt-5.6-terra": 200,
-          "gpt-5.6-luna": 0,
-          "abstain": 0
-        },
-        "gpt-5.6-luna": {
-          "gpt-5.6-sol": 0,
-          "gpt-5.6-terra": 0,
-          "gpt-5.6-luna": 200,
-          "abstain": 0
-        }
-      },
-      "replay_count": 600,
       "runtime_name": "single:medium:3466eb790060",
       "runtime_signature": "bdbf9486229598554f983daecf65370696d32e5097b563fe809d74202acf0e77",
+      "decision_level": "medium",
       "required_samples": {
         "rand_country|normal+no_history": 20,
         "b80_letter_count|normal+no_history": 10
@@ -3795,82 +3128,13 @@
         }
       },
       "missing_cells": [],
-      "quality_failures": []
+      "contract_failures": [],
+      "formal_eligible": true
     },
     "769fb7b8a04f99a080d14abfd25d6657a11d2ffd58b3572e7a912f76e01b7498": {
-      "tau": 0.0,
-      "formal_eligible": true,
-      "pass_margin": 1e-12,
-      "alert_margin": 1e-12,
-      "mixture_gain_threshold": 0.5014726486556107,
-      "pass_metrics": {
-        "accepted": 600,
-        "correct": 600,
-        "errors": 0,
-        "error_rate": 0.0,
-        "error_wilson95_upper": 0.00636170101370071,
-        "coverage_overall": 1.0,
-        "coverage_by_window": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "coverage_worst_window": 1.0,
-        "error_rate_by_window": {
-          "1": 0.0,
-          "2": 0.0,
-          "3": 0.0,
-          "4": 0.0
-        },
-        "error_rate_worst_window": 0.0
-      },
-      "alert_metrics": {
-        "false_alerts": 0,
-        "total": 600,
-        "wilson95_upper": 0.00636170101370071
-      },
-      "mixture_metrics": {
-        "false_alerts": 1,
-        "total": 600,
-        "wilson95_upper": 0.009379560476138811
-      },
-      "temperature": 0.05,
-      "multiclass_log_loss": 0.0,
-      "ood_thresholds": {
-        "rand_country|normal+no_history": -2.6627005840842126,
-        "rand_country|normal+fixed_32k_history": -2.5969137868006915,
-        "rand_country|native_codex+no_history": -2.8982822522126743,
-        "rand_country|native_codex+fixed_32k_history": -2.932195517681712,
-        "rand_bird|normal+no_history": -1.3688909953340107,
-        "rand_bird|normal+fixed_32k_history": -2.0595967929502037,
-        "rand_bird|native_codex+no_history": -1.9189001196370612,
-        "rand_bird|native_codex+fixed_32k_history": -2.1461685270947815,
-        "b80_letter_count|normal+no_history": -0.9176586908104135
-      },
-      "confusion_matrix": {
-        "gpt-5.6-sol": {
-          "gpt-5.6-sol": 200,
-          "gpt-5.6-terra": 0,
-          "gpt-5.6-luna": 0,
-          "abstain": 0
-        },
-        "gpt-5.6-terra": {
-          "gpt-5.6-sol": 0,
-          "gpt-5.6-terra": 200,
-          "gpt-5.6-luna": 0,
-          "abstain": 0
-        },
-        "gpt-5.6-luna": {
-          "gpt-5.6-sol": 0,
-          "gpt-5.6-terra": 0,
-          "gpt-5.6-luna": 200,
-          "abstain": 0
-        }
-      },
-      "replay_count": 600,
       "runtime_name": "single:high:1c69a65a544b",
       "runtime_signature": "769fb7b8a04f99a080d14abfd25d6657a11d2ffd58b3572e7a912f76e01b7498",
+      "decision_level": "high",
       "required_samples": {
         "rand_country|normal+no_history": 10,
         "rand_country|normal+fixed_32k_history": 10,
@@ -3975,75 +3239,13 @@
         }
       },
       "missing_cells": [],
-      "quality_failures": []
+      "contract_failures": [],
+      "formal_eligible": true
     },
     "3453c3aafd090c6371c9b7923a86f4298f9e7a1d6f9d0d83ed5bec746b85afd6": {
-      "tau": 0.0,
-      "formal_eligible": true,
-      "pass_margin": 1e-12,
-      "alert_margin": 1e-12,
-      "mixture_gain_threshold": 0.36237618680663886,
-      "pass_metrics": {
-        "accepted": 600,
-        "correct": 600,
-        "errors": 0,
-        "error_rate": 0.0,
-        "error_wilson95_upper": 0.00636170101370071,
-        "coverage_overall": 1.0,
-        "coverage_by_window": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "coverage_worst_window": 1.0,
-        "error_rate_by_window": {
-          "1": 0.0,
-          "2": 0.0,
-          "3": 0.0,
-          "4": 0.0
-        },
-        "error_rate_worst_window": 0.0
-      },
-      "alert_metrics": {
-        "false_alerts": 0,
-        "total": 600,
-        "wilson95_upper": 0.00636170101370071
-      },
-      "mixture_metrics": {
-        "false_alerts": 1,
-        "total": 600,
-        "wilson95_upper": 0.009379560476138811
-      },
-      "temperature": 0.05,
-      "multiclass_log_loss": 5.432373745156375e-09,
-      "ood_thresholds": {
-        "rand_country|normal+no_history": -2.329007208022004,
-        "b80_letter_count|normal+no_history": -0.8650862627926633
-      },
-      "confusion_matrix": {
-        "gpt-5.6-sol": {
-          "gpt-5.6-sol": 200,
-          "gpt-5.6-terra": 0,
-          "gpt-5.6-luna": 0,
-          "abstain": 0
-        },
-        "gpt-5.6-terra": {
-          "gpt-5.6-sol": 0,
-          "gpt-5.6-terra": 200,
-          "gpt-5.6-luna": 0,
-          "abstain": 0
-        },
-        "gpt-5.6-luna": {
-          "gpt-5.6-sol": 0,
-          "gpt-5.6-terra": 0,
-          "gpt-5.6-luna": 200,
-          "abstain": 0
-        }
-      },
-      "replay_count": 600,
       "runtime_name": "continuous:medium:25c689554162",
       "runtime_signature": "3453c3aafd090c6371c9b7923a86f4298f9e7a1d6f9d0d83ed5bec746b85afd6",
+      "decision_level": "medium",
       "required_samples": {
         "rand_country|normal+no_history": 20,
         "b80_letter_count|normal+no_history": 20
@@ -4071,82 +3273,13 @@
         }
       },
       "missing_cells": [],
-      "quality_failures": []
+      "contract_failures": [],
+      "formal_eligible": true
     },
     "ff0f33470c5e56db938413d180948062a3defd86b3b93fa843f725b733d26ab4": {
-      "tau": 0.0,
-      "formal_eligible": true,
-      "pass_margin": 1e-12,
-      "alert_margin": 1e-12,
-      "mixture_gain_threshold": 0.2950201039585574,
-      "pass_metrics": {
-        "accepted": 600,
-        "correct": 600,
-        "errors": 0,
-        "error_rate": 0.0,
-        "error_wilson95_upper": 0.00636170101370071,
-        "coverage_overall": 1.0,
-        "coverage_by_window": {
-          "1": 1.0,
-          "2": 1.0,
-          "3": 1.0,
-          "4": 1.0
-        },
-        "coverage_worst_window": 1.0,
-        "error_rate_by_window": {
-          "1": 0.0,
-          "2": 0.0,
-          "3": 0.0,
-          "4": 0.0
-        },
-        "error_rate_worst_window": 0.0
-      },
-      "alert_metrics": {
-        "false_alerts": 0,
-        "total": 600,
-        "wilson95_upper": 0.00636170101370071
-      },
-      "mixture_metrics": {
-        "false_alerts": 1,
-        "total": 600,
-        "wilson95_upper": 0.009379560476138811
-      },
-      "temperature": 0.05,
-      "multiclass_log_loss": 0.0,
-      "ood_thresholds": {
-        "rand_country|normal+no_history": -2.3922782922518153,
-        "rand_country|normal+fixed_32k_history": -2.504138748682004,
-        "rand_country|native_codex+no_history": -2.646677833317366,
-        "rand_country|native_codex+fixed_32k_history": -2.6244043391801424,
-        "rand_bird|normal+no_history": -1.118503551579105,
-        "rand_bird|normal+fixed_32k_history": -1.8338357149381228,
-        "rand_bird|native_codex+no_history": -1.630898467064165,
-        "rand_bird|native_codex+fixed_32k_history": -1.9530677278078452,
-        "b80_letter_count|normal+no_history": -0.7604383118869452
-      },
-      "confusion_matrix": {
-        "gpt-5.6-sol": {
-          "gpt-5.6-sol": 200,
-          "gpt-5.6-terra": 0,
-          "gpt-5.6-luna": 0,
-          "abstain": 0
-        },
-        "gpt-5.6-terra": {
-          "gpt-5.6-sol": 0,
-          "gpt-5.6-terra": 200,
-          "gpt-5.6-luna": 0,
-          "abstain": 0
-        },
-        "gpt-5.6-luna": {
-          "gpt-5.6-sol": 0,
-          "gpt-5.6-terra": 0,
-          "gpt-5.6-luna": 200,
-          "abstain": 0
-        }
-      },
-      "replay_count": 600,
       "runtime_name": "continuous:high:6dd4619a927d",
       "runtime_signature": "ff0f33470c5e56db938413d180948062a3defd86b3b93fa843f725b733d26ab4",
+      "decision_level": "high",
       "required_samples": {
         "rand_country|normal+no_history": 20,
         "rand_country|normal+fixed_32k_history": 20,
@@ -4251,19 +3384,13 @@
         }
       },
       "missing_cells": [],
-      "quality_failures": []
+      "contract_failures": [],
+      "formal_eligible": true
     }
   },
   "formal_eligible": true,
-  "threshold_policy": {
-    "min_windows": 3,
-    "min_valid_rate": 0.95,
-    "pass_error_wilson95_upper_max": 0.05,
-    "pass_coverage_overall_min": 0.9,
-    "pass_coverage_worst_window_min": 0.8,
-    "alert_false_rate_wilson95_upper_max": 0.01,
-    "second_share_min": 0.1
-  },
-  "resampling_policy": "one_multinomial_draw_from_each_heldout_empirical_window;no_dirichlet_candidate_or_baseline_resampling",
-  "content_sha256": "dd692466ea601d99b737edae66a35941f236d5e7426244f2c04e43f314f43851"
+  "reference_ready": true,
+  "weight_formula": "0 if S<=0 or S<=D else min(1,(S-D)/S)",
+  "match_transform": "softmax_T_1",
+  "content_sha256": "f4df50f1601c7ac4a81635c24032756a235f5c7cb2695d046cee30d2b482ed90"
 }

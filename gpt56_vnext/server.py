@@ -19,7 +19,7 @@ from .probability_model import load_baseline
 from .retention import RetentionWriteError
 from .store import SQLiteStateStore
 from .transport import StreamingTransport
-from .utils import canonical_json, utc_now
+from .utils import canonical_json, normalize_api_base_url, utc_now
 
 
 WEB_ROOT = Path(__file__).with_name("web")
@@ -45,11 +45,6 @@ def _probability_probe_catalog() -> list[dict[str, Any]]:
             value for key, value in baseline.get("cells_quality", {}).items()
             if key.startswith(probe_id + "|")
         ]
-        calibrations = [
-            value for value in baseline.get("calibrations", {}).values()
-            if any(key.startswith(probe_id + "|") for key in (value.get("required_samples") or {}))
-        ]
-        pass_metrics = [value.get("pass_metrics") or {} for value in calibrations if value.get("pass_metrics")]
         raw_profiles = ((baseline.get("raw_counts") or {}).get(probe_id) or {}).get("profiles") or {}
         trusted_windows = min((
             len(model_value.get("windows") or {})
@@ -59,7 +54,7 @@ def _probability_probe_catalog() -> list[dict[str, Any]]:
         rows.append({
             "id": probe_id,
             "name": name,
-            "type": "概率",
+            "type": "行为指纹",
             "description": "按固定题面形成类别分布，并与三模型多时间窗可信基线比较。",
             "trusted_profiles": len(cells),
             "between_model_jsd": [cell.get("between_model_jsd") for cell in cells],
@@ -67,15 +62,8 @@ def _probability_probe_catalog() -> list[dict[str, Any]]:
             "weights": [cell.get("weight") for cell in cells],
             "minimum_valid_rate": min((value.get("minimum_valid_rate", 0.0) for value in quality), default=0.0),
             "trusted_windows": trusted_windows,
-            "replay_error_wilson95_upper": max((float(value.get("error_wilson95_upper", 1.0)) for value in pass_metrics), default=None),
-            "replay_coverage_overall": min((float(value.get("coverage_overall", 0.0)) for value in pass_metrics), default=None),
-            "replay_coverage_worst_window": min((float(value.get("coverage_worst_window", 0.0)) for value in pass_metrics), default=None),
-            "replay_metric_scope": "包含该探针的正式组合门禁",
-            "formal_calibrations": sum(
-                probe_id + "|" in "\n".join(calibration.get("required_samples", {}))
-                for calibration in baseline.get("calibrations", {}).values()
-                if calibration.get("formal_eligible")
-            ),
+            "time_stability_verified": all(bool(cell.get("time_stability_verified")) for cell in cells),
+            "scoring_version": baseline.get("scoring_version"),
         })
     return rows
 
@@ -195,7 +183,10 @@ class AppState:
             "output": str(output) if output.is_file() else None,
         }
         status["progress"] = store.progress(session_id)
-        status["progress"]["remaining"] = max(0, status["progress"]["planned"] - status["progress"]["successful"])
+        status["progress"]["remaining"] = max(0, status["progress"]["planned"] - status["progress"]["logical_completed"])
+        errors = [row for row in store.events(session_id) if row.get("event") == "generator_error"]
+        if errors:
+            status["error"] = (errors[-1].get("payload") or {}).get("safe_message")
         return status
 
     def current_generator_store(self) -> SQLiteStateStore | None:
@@ -229,7 +220,7 @@ def _json_bytes(value: Any) -> bytes:
 
 
 def _safe_endpoint(value: str) -> str:
-    parsed = urlsplit(value)
+    parsed = urlsplit(normalize_api_base_url(value))
     host = parsed.hostname or ""
     if parsed.port:
         host += f":{parsed.port}"
@@ -237,12 +228,31 @@ def _safe_endpoint(value: str) -> str:
 
 
 def _safe_exception_message(exc: BaseException) -> str:
+    safe_message = getattr(exc, "safe_message", None)
+    if isinstance(safe_message, str) and safe_message.strip():
+        return safe_message.strip()
     message = str(exc).strip() or type(exc).__name__
     message = re.sub(r"(?i)\bBearer\s+\S+", "Bearer <redacted>", message)
     message = re.sub(r"\bsk-[A-Za-z0-9_-]{8,}\b", "<redacted-key>", message)
     message = re.sub(r"(?i)[A-Za-z]:\\Users\\[^\\\s]+", lambda _match: r"C:\Users\<redacted>", message)
     message = re.sub(r"\s+", " ", message)[:600]
-    return f"{type(exc).__name__}: {message}"
+    translations = (
+        (r"detector is already running or stopping", "检测正在运行或停止中，请等待当前会话结束"),
+        (r"generator is already running or stopping", "探针生成器正在运行或停止中，请等待当前会话结束"),
+        (r"request body too large", "提交的数据过大"),
+        (r"JSON body must be an object", "请求正文必须是JSON对象"),
+        (r"probe content hash mismatch", "自定义探针内容校验失败，请重新导出后再导入"),
+        (r"unsupported fingerprint baseline schema", "指纹基线版本不受支持"),
+        (r"fingerprint baseline content hash mismatch", "指纹基线完整性校验失败"),
+        (r"runtime catalog is missing", "运行资源缺失，请重新下载完整发行包"),
+        (r"No such file|cannot find|not found", "检测所需文件缺失，请重新下载完整发行包"),
+    )
+    for pattern, translated in translations:
+        if re.search(pattern, message, flags=re.IGNORECASE):
+            return translated
+    if re.search(r"[A-Za-z]{3,}", message):
+        return "本地运行发生未分类异常；请下载完整JSON报告并检查安装文件是否完整"
+    return message
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -264,19 +274,19 @@ class Handler(BaseHTTPRequestHandler):
     def _body(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0"))
         if length > 2_000_000:
-            raise ValueError("request body too large")
+            raise ValueError("提交的数据过大")
         value = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
         if not isinstance(value, dict):
-            raise ValueError("JSON body must be an object")
+            raise ValueError("请求正文必须是JSON对象")
         return value
 
     def _require_token(self) -> bool:
         if self.headers.get("X-GPT56-Session") != self.server.state.token:
-            self._send_json({"error": "invalid local session token"}, 403)
+            self._send_json({"error": "本地会话令牌无效，请刷新页面"}, 403)
             return False
         origin = self.headers.get("Origin")
         if origin and urlsplit(origin).hostname not in {"127.0.0.1", "localhost"}:
-            self._send_json({"error": "cross-origin request rejected"}, 403)
+            self._send_json({"error": "已拒绝跨站请求"}, 403)
             return False
         return True
 
@@ -309,20 +319,20 @@ class Handler(BaseHTTPRequestHandler):
             status = self.server.state.safe_status("detector")
             session_id = status.get("session_id")
             if store is None or not session_id:
-                self._send_json({"error": "report unavailable"}, 404)
+                self._send_json({"error": "当前没有可读取的检测报告"}, 404)
                 return
             report = store.report(str(session_id))
-            self._send_json(report if report is not None else {"error": "report unavailable"}, 200 if report is not None else 404)
+            self._send_json(report if report is not None else {"error": "当前检测报告尚未生成"}, 200 if report is not None else 404)
             return
         if path == "/api/generator/export":
             output = self.server.state.generator.get("output")
             if not output:
-                self._send_json({"error": "export unavailable"}, 404)
+                self._send_json({"error": "当前没有可下载的探针文件"}, 404)
                 return
             file_path = Path(output).resolve()
             root = self.server.state.runs_root.resolve()
             if not file_path.is_file() or not file_path.is_relative_to(root):
-                self._send_json({"error": "export path rejected"}, 403)
+                self._send_json({"error": "导出文件路径不在允许的本地运行目录内"}, 403)
                 return
             body = file_path.read_bytes()
             self.send_response(200)
@@ -375,6 +385,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._stop_detector()
             elif path == "/api/generator/start":
                 self._start_generator(body)
+            elif path == "/api/generator/stop":
+                self._stop_generator()
             elif path == "/api/generator/analyze":
                 self._analyze_generator(body)
             elif path == "/api/probe/verify":
@@ -384,7 +396,7 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/probe/use-generated":
                 self._use_generated_probe()
             else:
-                self._send_json({"error": "unknown endpoint"}, 404)
+                self._send_json({"error": "接口不存在"}, 404)
         except RetentionWriteError as exc:
             self._send_json({"error": _safe_exception_message(exc), "error_type": "retention_path_not_writable"}, 400)
         except (KeyError, TypeError, ValueError) as exc:
@@ -393,6 +405,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"error": _safe_exception_message(exc)}, 500)
 
     def _start_detector(self, body: dict[str, Any]) -> None:
+        base_url = normalize_api_base_url(str(body["base_url"]))
         config = normalize_config(body["config"])
         for custom_probe in config.get("custom_probes", []):
             verify_probe_file(probe_document(custom_probe))
@@ -413,7 +426,7 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("resume config does not match the frozen session")
                 if persisted.get("claimed_model") != body.get("model", "gpt-5.6-sol"):
                     raise ValueError("resume model does not match the frozen session")
-                if persisted.get("safe_endpoint") != _safe_endpoint(str(body["base_url"])):
+                if persisted.get("safe_endpoint") != _safe_endpoint(base_url):
                     raise ValueError("resume endpoint does not match the frozen session")
                 session_id = resume_session_id
                 run_dir = self.server.state.detector_run_dir or self.server.state.runs_root / "detector" / f"session-{session_id}"
@@ -430,7 +443,7 @@ class Handler(BaseHTTPRequestHandler):
             self.server.state.detector_store = None
             config["session_id"] = session_id
             session = DetectorSession(
-                base_url=body["base_url"],
+                base_url=base_url,
                 model=body.get("model", "gpt-5.6-sol"),
                 api_key=body["api_key"],
                 config=config,
@@ -486,14 +499,31 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json({"started": True, "session_id": session_id, "official": config["official"], "config_hash": config["config_hash"]})
 
     def _stop_detector(self) -> None:
+        result = {
+            "accepted": False,
+            "stopping": False,
+            "session_id": None,
+            "previous_status": "idle",
+            "current_status": "idle",
+            "stop_requested_at": None,
+            "active_requests_cancelled": 0,
+        }
         with self.server.state.lock:
             session = self.server.state.detector_session
             if session is not None and self.server.state.detector.get("status") == "running":
-                session.stop()
+                result = session.stop()
+                result["stopping"] = True
                 self.server.state.detector = {**self.server.state.detector, "status": "stopping", "updated_at": utc_now()}
-        self._send_json({"stopping": bool(session)})
+            elif session is not None:
+                result.update({
+                    "session_id": session.session_id,
+                    "previous_status": self.server.state.detector.get("status", "unknown"),
+                    "current_status": self.server.state.detector.get("status", "unknown"),
+                })
+        self._send_json(result)
 
     def _start_generator(self, body: dict[str, Any]) -> None:
+        base_url = normalize_api_base_url(str(body["base_url"]))
         with self.server.state.lock:
             if self.server.state.generator.get("status") in {"running", "stopping"}:
                 raise ValueError("generator is already running or stopping")
@@ -518,7 +548,7 @@ class Handler(BaseHTTPRequestHandler):
                 plan_hash = hashlib.sha256(canonical_json(plan.to_public_dict()).encode("utf-8")).hexdigest()
                 if persisted.get("config_hash") != plan_hash:
                     raise ValueError("resume plan does not match the frozen generator session")
-                if persisted.get("safe_endpoint") and persisted.get("safe_endpoint") != _safe_endpoint(str(body["base_url"])):
+                if persisted.get("safe_endpoint") and persisted.get("safe_endpoint") != _safe_endpoint(base_url):
                     raise ValueError("resume endpoint does not match the frozen generator session")
                 session_id = resume_session_id
                 run_dir = self.server.state.generator_run_dir or self.server.state.runs_root / "generator" / f"session-{session_id}"
@@ -530,13 +560,12 @@ class Handler(BaseHTTPRequestHandler):
                 detached.close()
             self.server.state.generator_store = None
             session = ProbeGeneratorSession(
-                plan, run_dir, session_id=session_id, safe_endpoint=_safe_endpoint(str(body["base_url"])),
+                plan, run_dir, session_id=session_id, safe_endpoint=_safe_endpoint(base_url),
             )
             self.server.state.generator_session = session
             self.server.state.generator_run_dir = run_dir
             self.server.state.generator = {"status": "running", "session_id": session_id, "updated_at": utc_now(), "probe_id": plan.probe_id}
         api_key = str(body["api_key"])
-        base_url = str(body["base_url"])
         local = threading.local()
         transports: list[StreamingTransport] = []
         transport_lock = threading.Lock()
@@ -547,6 +576,7 @@ class Handler(BaseHTTPRequestHandler):
                     base_url,
                     api_key,
                     timeout=300 if job["context_mode"] == "fixed_32k_history" or job["request_format"] == "native_codex" else 180,
+                    cancellation=session.cancellation,
                 )
                 with transport_lock:
                     transports.append(local.transport)
@@ -566,7 +596,11 @@ class Handler(BaseHTTPRequestHandler):
             nonlocal api_key
             try:
                 progress = session.run(request)
-                status = {"status": "collected", "session_id": session_id, "updated_at": utc_now(), **progress}
+                final_status = str(progress.pop("status", "error"))
+                error = progress.pop("error", None)
+                status = {"status": final_status, "session_id": session_id, "updated_at": utc_now(), **progress}
+                if error:
+                    status["error"] = error
             except Exception as exc:
                 status = {"status": "error", "session_id": session_id, "updated_at": utc_now(), "error": _safe_exception_message(exc)}
             finally:
@@ -584,6 +618,35 @@ class Handler(BaseHTTPRequestHandler):
             self.server.state.generator_thread = worker
         worker.start()
         self._send_json({"started": True, "session_id": session_id})
+
+    def _stop_generator(self) -> None:
+        result = {
+            "accepted": False,
+            "stopping": False,
+            "session_id": None,
+            "previous_status": "idle",
+            "current_status": "idle",
+            "stop_requested_at": None,
+            "active_requests_cancelled": 0,
+        }
+        with self.server.state.lock:
+            session = self.server.state.generator_session
+            current_status = self.server.state.generator.get("status", "idle")
+            if session is not None and current_status == "running":
+                result = session.stop()
+                result["stopping"] = True
+                self.server.state.generator = {
+                    **self.server.state.generator,
+                    "status": "stopping",
+                    "updated_at": utc_now(),
+                }
+            elif session is not None:
+                result.update({
+                    "session_id": session.session_id,
+                    "previous_status": current_status,
+                    "current_status": current_status,
+                })
+        self._send_json(result)
 
     def _analyze_generator(self, body: dict[str, Any]) -> None:
         session = self.server.state.generator_session
@@ -627,7 +690,7 @@ class Handler(BaseHTTPRequestHandler):
     def _use_generated_probe(self) -> None:
         output = self.server.state.generator.get("output")
         if not output:
-            raise ValueError("generator export unavailable")
+            raise ValueError("当前没有可导出的探针结果")
         file_path = Path(output).resolve()
         root = self.server.state.runs_root.resolve()
         if not file_path.is_file() or not file_path.is_relative_to(root):

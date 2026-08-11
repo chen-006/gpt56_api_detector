@@ -15,7 +15,7 @@ import uuid
 from .normalizers import normalize_answer, validate_normalizer
 from .probability_model import MODELS, fit_baseline, fit_cell, verify_baseline
 from .store import SQLiteStateStore
-from .transport import TransportError
+from .transport import RequestCancellationController, TransportCancelled, TransportError
 from .utils import atomic_write_json, canonical_json, deterministic_job_id, sha256_text, utc_now
 
 
@@ -116,6 +116,8 @@ class GeneratorPlan:
 
 
 RequestCallable = Callable[[dict[str, Any], list[dict[str, str]]], dict[str, Any]]
+CANCELLATION_POLL_SECONDS = 0.10
+CANCELLATION_GRACE_SECONDS = 3.0
 
 
 class ProbeGeneratorSession:
@@ -150,18 +152,44 @@ class ProbeGeneratorSession:
         if activate:
             self.store.reconcile_incomplete_attempts(self.session_id, self.plan.retries + 1)
         self.stop_event = threading.Event()
+        self.cancellation = RequestCancellationController()
+        self._fatal_error: dict[str, Any] | None = None
+        self._fatal_lock = threading.Lock()
         self.output_path: Path | None = None
 
     def close(self) -> None:
         self.store.close()
 
-    def stop(self) -> None:
+    def stop(self) -> dict[str, Any]:
+        previous = self.store.session(self.session_id) or {}
+        previous_status = str(previous.get("status") or "unknown")
         self.stop_event.set()
-        self.store.request_stop(self.session_id)
+        requested_at = self.store.request_stop(self.session_id)
+        self.store.update_session_status(self.session_id, "stopping")
+        cancelled = self.cancellation.cancel_all()
+        return {
+            "accepted": True,
+            "session_id": self.session_id,
+            "previous_status": previous_status,
+            "current_status": "stopping",
+            "stop_requested_at": requested_at,
+            "active_requests_cancelled": cancelled,
+        }
+
+    def _stop_for_auth_error(self, status: int | None) -> None:
+        with self._fatal_lock:
+            if self._fatal_error is None:
+                self._fatal_error = {
+                    "category": "upstream_authentication_failed",
+                    "http_status": status,
+                    "safe_message": f"可信 API 认证失败（HTTP {status}），已停止后续采样请求",
+                }
+        self.stop_event.set()
+        self.cancellation.cancel_all()
 
     def progress_snapshot(self) -> dict[str, Any]:
         progress = self.store.progress(self.session_id)
-        progress["remaining"] = progress["planned"] - progress["successful"]
+        progress["remaining"] = max(0, progress["planned"] - progress["logical_completed"])
         return progress
 
     def run(self, request: RequestCallable) -> dict[str, Any]:
@@ -187,8 +215,27 @@ class ProbeGeneratorSession:
             self.store.append_event(self.session_id, "window_end", cycle=window, payload={"planned_jobs": len(jobs)})
             if window < max(by_window) and self.plan.window_gap_seconds > 0:
                 self.stop_event.wait(self.plan.window_gap_seconds)
-        self.store.update_session_status(self.session_id, "stopped" if self.stop_event.is_set() else "collected")
-        return self.progress_snapshot()
+        progress = self.progress_snapshot()
+        if self._fatal_error is not None:
+            final_status = "error"
+            error = self._fatal_error["safe_message"]
+        elif self.stop_event.is_set():
+            final_status = "stopped"
+            error = None
+        elif progress["planned"] > 0 and progress["successful"] == 0:
+            final_status = "error"
+            error = "没有取得任何有效样本，请检查可信 API 地址、权限和线路"
+        else:
+            final_status = "collected"
+            error = None
+        if error:
+            self.store.append_event(
+                self.session_id,
+                "generator_error",
+                payload={"safe_message": error, "fatal": self._fatal_error is not None},
+            )
+        self.store.update_session_status(self.session_id, final_status)
+        return {**progress, "status": final_status, "error": error}
 
     def _run_jobs(self, jobs: list[dict[str, Any]], request: RequestCallable) -> None:
         ids = {job["job_id"] for job in jobs}
@@ -202,6 +249,7 @@ class ProbeGeneratorSession:
         workers = max(1, min(self.plan.workers, len(pending)))
         executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="gpt56-generator")
         futures: dict[Any, dict[str, Any]] = {}
+        cancellation_deadline: float | None = None
 
         def submit_next() -> bool:
             if self.stop_event.is_set():
@@ -217,33 +265,68 @@ class ProbeGeneratorSession:
             for _ in range(workers):
                 submit_next()
             while futures:
-                done, _ = wait(tuple(futures), return_when=FIRST_COMPLETED)
+                done, _ = wait(
+                    tuple(futures),
+                    timeout=CANCELLATION_POLL_SECONDS,
+                    return_when=FIRST_COMPLETED,
+                )
+                if not done:
+                    if self.stop_event.is_set():
+                        if cancellation_deadline is None:
+                            self.cancellation.cancel_all()
+                            cancellation_deadline = time.monotonic() + CANCELLATION_GRACE_SECONDS
+                        if time.monotonic() >= cancellation_deadline:
+                            break
+                    continue
                 for future in done:
                     futures.pop(future)
                     future.result()
                     submit_next()
         finally:
+            active_job_ids = {str(job["job_id"]) for job in futures.values()}
+            if self.stop_event.is_set():
+                self.cancellation.cancel_all()
             for future in futures:
                 future.cancel()
-            executor.shutdown(wait=True, cancel_futures=True)
+            executor.shutdown(wait=False, cancel_futures=True)
             if self.stop_event.is_set():
                 for job in self.store.pending_jobs(self.session_id, max_attempts=self.plan.retries + 1):
                     if job["job_id"] not in ids:
                         continue
                     attempts_sent = self.store.next_attempt_number(self.session_id, job["job_id"]) - 1
-                    if attempts_sent == 0:
-                        self.store.record_cancelled(self.session_id, job["job_id"], {
-                            **job, "status": "cancelled", "time": utc_now(), "attempts_sent": 0,
-                        })
-                    else:
-                        self.store.record_terminal_result(self.session_id, job["job_id"], "error", {
-                            **job, "status": "error", "time": utc_now(), "attempts_sent": attempts_sent,
-                            "error": {
-                                "stage": "runtime", "category": "stopped_before_retry", "retryable": False,
-                                "http_status": None, "attempt": attempts_sent,
-                                "safe_message": "用户停止了采集，未继续发送下一次重试",
-                            },
-                        })
+                    category = (
+                        "cancelled_before_send" if attempts_sent == 0
+                        else "cancelled_in_flight" if job["job_id"] in active_job_ids
+                        else "cancelled_before_retry"
+                    )
+                    self.store.record_cancelled(
+                        self.session_id,
+                        job["job_id"],
+                        self._cancelled_row(job, attempts_sent, category),
+                    )
+                self.store.cancel_running_attempts(
+                    self.session_id,
+                    active_job_ids,
+                    category="cancelled_in_flight",
+                )
+
+    @staticmethod
+    def _cancelled_row(job: dict[str, Any], attempts_sent: int, category: str) -> dict[str, Any]:
+        return {
+            **job,
+            "kind": "behavior",
+            "status": "cancelled",
+            "time": utc_now(),
+            "attempts_sent": attempts_sent,
+            "error": {
+                "stage": "transport",
+                "category": category,
+                "retryable": False,
+                "http_status": None,
+                "attempt": attempts_sent,
+                "safe_message": "用户已停止采集，当前请求已取消",
+            },
+        }
 
     def _execute_job(self, job: dict[str, Any], request: RequestCallable) -> dict[str, Any]:
         messages = []
@@ -253,9 +336,15 @@ class ProbeGeneratorSession:
         max_attempts = self.plan.retries + 1
         first_attempt = self.store.next_attempt_number(self.session_id, job["job_id"])
         for attempt_no in range(first_attempt, max_attempts + 1):
+            if self.stop_event.is_set():
+                row = self._cancelled_row(job, attempt_no - 1, "cancelled_before_retry")
+                self.store.record_cancelled(self.session_id, job["job_id"], row)
+                return row
             attempt_id = self.store.start_attempt(self.session_id, job["job_id"], attempt_no, max_attempts=max_attempts)
             try:
                 result = request(job, messages)
+                if self.stop_event.is_set():
+                    raise TransportCancelled()
                 answer = str(result.get("answer", ""))
                 row = {
                     **job,
@@ -282,8 +371,24 @@ class ProbeGeneratorSession:
                     final_job_status="ok",
                 )
                 return row
+            except TransportCancelled:
+                row = self._cancelled_row(job, attempt_no, "cancelled_in_flight")
+                self.store.finish_attempt(
+                    attempt_id=attempt_id,
+                    status="cancelled",
+                    stage="transport",
+                    category="cancelled_in_flight",
+                    retryable=False,
+                    http_status=None,
+                    safe_message=row["error"]["safe_message"],
+                    final_result=row,
+                    final_job_status="cancelled",
+                )
+                return row
             except Exception as exc:
                 status = getattr(exc, "status", None)
+                if isinstance(exc, TransportError) and status in {401, 403}:
+                    self._stop_for_auth_error(status)
                 retryable = isinstance(exc, TransportError) and exc.retryable
                 will_retry = retryable and attempt_no < max_attempts and not self.stop_event.is_set()
                 final = None if will_retry else {
@@ -310,7 +415,7 @@ class ProbeGeneratorSession:
                 )
                 if not will_retry:
                     return final or {}
-                time.sleep(min(2.0, 0.25 * (2 ** (attempt_no - 1))))
+                self.stop_event.wait(min(2.0, 0.25 * (2 ** (attempt_no - 1))))
         raise AssertionError("attempt loop exhausted")
 
     def _raw_baseline(self) -> dict[str, Any]:
@@ -341,7 +446,7 @@ class ProbeGeneratorSession:
                 profiles[profile_name] = {"models": models, "windows": list(range(1, self.plan.temporal_windows + 1))}
         return {"baseline_id": f"custom-{self.plan.probe_id}", "probes": {self.plan.probe_id: {"profiles": profiles}}}
 
-    def analyze_and_export(self, output_path: str | Path, *, replay_draws: int = 50) -> dict[str, Any]:
+    def analyze_and_export(self, output_path: str | Path) -> dict[str, Any]:
         raw = self._raw_baseline()
         runtime_spec = {
             "name": f"custom:{self.plan.probe_id}",
@@ -379,81 +484,22 @@ class ProbeGeneratorSession:
                 "context_mode": context_mode,
                 "normalizer_hash": metadata[self.plan.probe_id]["normalizer_hash"],
             }
-        try:
-            baseline = fit_baseline(
-                raw,
-                runtime_specs=[runtime_spec],
-                probe_metadata=metadata,
-                replay_draws_per_model_window=replay_draws,
-                seed=int(hashlib.sha256(self.plan.probe_id.encode("utf-8")).hexdigest()[:16], 16),
-                baseline_id=f"custom-{self.plan.probe_id}",
-            )
-        except ValueError as exc:
-            if self.plan.temporal_windows >= 3:
-                raise
-            cells: dict[str, Any] = {}
-            cells_quality: dict[str, Any] = {}
-            reference_profiles: dict[str, Any] = {}
-            for probe_id, probe in raw["probes"].items():
-                for profile_name, profile in (probe.get("profiles") or {}).items():
-                    key = f"{probe_id}|{profile_name}"
-                    cells[key] = fit_cell(profile, 0.0)
-                    model_summary: dict[str, Any] = {}
-                    minimum_samples: int | None = None
-                    minimum_valid_rate = 1.0
-                    for model in MODELS:
-                        windows = ((profile.get("models") or {}).get(model) or {}).get("windows") or {}
-                        total = sum(int(window.get("total", 0)) for window in windows.values())
-                        valid = sum(int(window.get("valid", 0)) for window in windows.values())
-                        valid_rate = valid / max(1, total)
-                        model_summary[model] = {
-                            "windows": len(windows),
-                            "total": total,
-                            "valid": valid,
-                            "valid_rate": valid_rate,
-                        }
-                        minimum_samples = total if minimum_samples is None else min(minimum_samples, total)
-                        minimum_valid_rate = min(minimum_valid_rate, valid_rate)
-                    reference_profiles[key] = {
-                        "models": model_summary,
-                        "missing_models": [model for model, value in model_summary.items() if value["valid"] == 0],
-                    }
-                    cells_quality[key] = {
-                        "minimum_window_samples": minimum_samples or 0,
-                        "minimum_valid_rate": minimum_valid_rate,
-                        "window_count_by_model": {
-                            model: value["windows"] for model, value in model_summary.items()
-                        },
-                    }
-            missing_models = sorted({
-                model
-                for value in reference_profiles.values()
-                for model in value["missing_models"]
-            })
-            reference_ready = not missing_models
-            baseline = {
-                "schema_version": 2,
-                "scoring_version": "trusted-likelihood-v2",
-                "baseline_id": f"custom-{self.plan.probe_id}",
-                "models": list(MODELS),
-                "raw_counts": raw["probes"],
-                "probe_metadata": metadata,
-                "calibrations": {},
-                "cells": cells,
-                "cells_quality": cells_quality,
-                "formal_eligible": False,
-                "reference_ready": reference_ready,
-                "reference_only_reason": (
-                    "自定义探针已按单时间窗生成；本版本导入后作为参考证据。"
-                    if reference_ready
-                    else f"采样不完整，缺少有效模型数据：{', '.join(missing_models)}"
-                ),
-                "technical_reference_reason": str(exc),
-                "reference_diagnostics": {"profiles": reference_profiles},
-            }
-            baseline["content_sha256"] = sha256_text(canonical_json(baseline))
+        baseline = fit_baseline(
+            raw,
+            runtime_specs=[runtime_spec],
+            probe_metadata=metadata,
+            baseline_id=f"custom-{self.plan.probe_id}",
+        )
+        baseline["reference_only_reason"] = (
+            "自定义探针仅作为参考证据；单时间窗不能验证随时间稳定性。"
+            if self.plan.temporal_windows == 1
+            else "自定义探针仅作为参考证据；多个时间窗已用于估计时间漂移。"
+        )
+        baseline["time_stability_verified"] = self.plan.temporal_windows >= 2
+        baseline.pop("content_sha256", None)
+        baseline["content_sha256"] = sha256_text(canonical_json(baseline))
         export = {
-            "schema_version": 2,
+            "schema_version": 3,
             "probe_identity": {
                 "name": self.plan.name,
                 "probe_id": self.plan.probe_id,
@@ -577,7 +623,7 @@ def reference_baseline(value: dict[str, Any]) -> dict[str, Any]:
     cells: dict[str, Any] = {}
     for probe_id, probe in (artifact.get("raw_counts") or {}).items():
         for profile_name, profile in (probe.get("profiles") or {}).items():
-            cells[f"{probe_id}|{profile_name}"] = fit_cell(profile, 0.0)
+            cells[f"{probe_id}|{profile_name}"] = fit_cell(profile)
     artifact["cells"] = cells
     artifact["runtime_cells_derived_from_signed_raw_counts"] = bool(cells)
     artifact.pop("content_sha256", None)

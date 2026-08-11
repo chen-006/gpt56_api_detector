@@ -10,7 +10,7 @@
   <header class="topbar">
     <div>
       <strong>GPT-5.6 混用检测器</strong>
-      <span>vNext · 本机运行</span>
+      <span>v4.1.0 · 本机运行</span>
     </div>
     <a href="/generator">探针生成器</a>
   </header>
@@ -46,9 +46,9 @@
             <h2>请求外观与上下文</h2>
             <div class="option-grid">
               <label class="check-row"><input type="checkbox" id="format-normal">普通 Responses 请求<span>基础外观</span></label>
-              <label class="check-row"><input type="checkbox" id="format-native">原生 Codex 请求<span>使用已验证 raw profile</span></label>
+              <label class="check-row"><input type="checkbox" id="format-native">原生 Codex 请求<span>建议先开启系统级 TUN VPN；浏览器代理不一定覆盖检测进程</span></label>
               <label class="check-row"><input type="checkbox" id="context-none">无历史<span>最低 Token 消耗</span></label>
-              <label class="check-row"><input type="checkbox" id="context-32k">固定 32K 历史<span>每次约 33,792 词</span></label>
+              <label class="check-row"><input type="checkbox" id="context-32k">固定 32K 历史<span>每次约 33,792 输入 tokens，会明显增加消耗</span></label>
             </div>
           </section>
           <section class="plain-section">
@@ -86,13 +86,17 @@
       <div id="report-content" class="hidden">
         <div id="verdict-band" class="verdict-band"><div><span class="eyebrow">综合结论</span><h1 id="verdict-title">—</h1><p id="verdict-subtitle"></p></div><button id="new-session" class="secondary">新建会话</button></div>
         <div id="report-custom" class="warning-banner hidden"><strong>自定义档位测试结果仅供参考</strong><span></span></div>
-        <section class="report-section"><h2>证据总览</h2><div id="evidence-summary" class="metrics"></div></section>
-        <section class="report-section"><h2>未通过或未完成项目</h2><div id="failed-items" class="report-list"></div></section>
-        <section class="report-section"><h2>模型概率与误差</h2><div id="probability-bars" class="probability-bars"></div></section>
+        <section class="report-section fingerprint-section">
+          <div class="section-heading compact"><div><h2>指纹匹配度</h2><p>表示本批答案分布与三种可信基线的相对接近程度，不是真实路由概率或混用比例。</p></div><strong id="fingerprint-status" class="fingerprint-status">—</strong></div>
+          <div id="fingerprint-bars" class="fingerprint-bars"></div>
+          <details class="reference-note"><summary>现有验证参考与适用边界</summary><div id="fingerprint-reference"></div></details>
+        </section>
         <section class="report-section"><h2>Juice 结果</h2><div id="juice-result" class="data-table"></div></section>
-        <section class="report-section"><h2>概率探针</h2><div id="probe-results" class="data-table"></div></section>
-        <section class="report-section"><h2>请求格式格对比</h2><div id="profile-results" class="data-table"></div></section>
+        <section class="report-section"><h2>输出完整性与覆盖检测</h2><div id="deterministic-results" class="report-list"></div></section>
         <section class="report-section"><h2>线路质量</h2><div id="network-result" class="metrics"></div></section>
+        <section class="report-section"><h2>未通过或未完成项目</h2><div id="failed-items" class="report-list"></div></section>
+        <section class="report-section"><h2>行为指纹探针</h2><div id="probe-results" class="data-table"></div></section>
+        <section class="report-section"><h2>请求格式对比</h2><div id="profile-results" class="data-table"></div></section>
         <details class="report-section technical"><summary>方法、限制和 JSON 摘要</summary><div id="limitations"></div><p><a class="download-link" href="/api/detector/report" download="gpt56-report.json">下载完整 JSON 报告</a></p><pre id="report-json"></pre></details>
       </div>
     </section>

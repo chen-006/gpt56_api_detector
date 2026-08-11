@@ -518,6 +518,44 @@ function decodeChunked(buffer) {
   }
 }
 
+function decodeAvailableChunks(buffer) {
+  let offset = 0;
+  const chunks = [];
+  for (;;) {
+    const lineEnd = buffer.indexOf("\r\n", offset);
+    if (lineEnd < 0) return Buffer.concat(chunks);
+    const line = buffer.subarray(offset, lineEnd).toString("ascii").split(";", 1)[0];
+    const size = Number.parseInt(line, 16);
+    if (!Number.isFinite(size) || size < 0) throw new Error(`invalid chunk size: ${line}`);
+    offset = lineEnd + 2;
+    if (size === 0 || buffer.length < offset + size + 2) return Buffer.concat(chunks);
+    chunks.push(buffer.subarray(offset, offset + size));
+    offset += size;
+    if (!buffer.subarray(offset, offset + 2).equals(Buffer.from("\r\n"))) {
+      throw new Error("invalid chunk terminator");
+    }
+    offset += 2;
+  }
+}
+
+function hasTerminalSseEvent(body) {
+  const blocks = body.toString("utf8").split(/\r?\n\r?\n/);
+  for (const block of blocks.slice(0, -1)) {
+    const payload = block.split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n");
+    if (!payload || payload === "[DONE]") continue;
+    try {
+      const event = JSON.parse(payload);
+      if (["response.completed", "response.incomplete", "response.failed"].includes(event?.type)) return true;
+    } catch {
+      // The block may be an unrelated non-JSON SSE event.
+    }
+  }
+  return false;
+}
+
 function maybeDecompress(body, headers) {
   const encoding = String(headers["content-encoding"]?.[0] ?? "").toLowerCase();
   if (encoding === "gzip") return zlib.gunzipSync(body);
@@ -697,12 +735,22 @@ async function sendRawHttp(target, raw, timeoutMs) {
         if (!head) return;
         const encodedBody = received.subarray(head.bodyOffset);
         const transfer = String(head.headers["transfer-encoding"]?.[0] ?? "").toLowerCase();
+        const encoding = String(head.headers["content-encoding"]?.[0] ?? "").toLowerCase();
         let body = null;
         if (transfer.includes("chunked")) {
+          if (!encoding) {
+            const available = decodeAvailableChunks(encodedBody);
+            if (hasTerminalSseEvent(available)) {
+              finish(null, { ...head, body: available });
+              return;
+            }
+          }
           body = decodeChunked(encodedBody);
         } else if (head.headers["content-length"]?.[0] !== undefined) {
           const length = Number.parseInt(head.headers["content-length"][0], 10);
           if (encodedBody.length >= length) body = encodedBody.subarray(0, length);
+        } else if (!encoding && hasTerminalSseEvent(encodedBody)) {
+          body = encodedBody;
         }
         if (body) finish(null, { ...head, body: maybeDecompress(body, head.headers) });
       } catch (error) {
