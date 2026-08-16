@@ -9,6 +9,8 @@
 - 普通、原生 Codex、无历史和固定 32K 历史之间是否出现差异化路由；
 - 请求是否成功、重试、超时或被上游拒绝。
 
+此处下载最新版一键包（git clone暂不可用）：https://github.com/chen-006/gpt56_api_detector/releases
+
 友情链接：[Linux.do 相关讨论](https://linux.do/t/topic/2704354)
 
 概率探针实现参考：[hlwy-ai-checker](https://github.com/hanlinwenyuan/hlwy-ai-checker)
